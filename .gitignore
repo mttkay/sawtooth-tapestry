@@ -14,3 +14,14 @@ gen/
 
 # Local configuration file (sdk path, etc)
 local.properties
+
+# Eclipse
+.settings
+.classpath
+.project
+
+# Mac
+.DS_Store
+
+# Maven
+target/
