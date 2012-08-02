@@ -24,8 +24,8 @@ public class WaveformProcessor {
     }
 
     public Bitmap process(Bitmap source) {
-        Bitmap scaledSource = Bitmap.createScaledBitmap(source, screenWidth, source.getHeight(),
-                true);
+        Bitmap scaledSource = Bitmap.createScaledBitmap(source, source.getWidth(),
+                source.getHeight(), true);
         Bitmap targetWaveform = Bitmap.createBitmap(scaledSource.getWidth(),
                 scaledSource.getHeight(), Bitmap.Config.ARGB_8888);
 

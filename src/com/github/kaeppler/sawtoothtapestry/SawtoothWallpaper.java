@@ -9,6 +9,14 @@ import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
 import android.util.DisplayMetrics;
 import android.view.SurfaceHolder;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.AnimationUtils;
+import android.view.animation.BounceInterpolator;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.ScaleAnimation;
+import android.view.animation.Transformation;
+import android.view.animation.TranslateAnimation;
 
 public class SawtoothWallpaper extends WallpaperService {
 
@@ -20,7 +28,8 @@ public class SawtoothWallpaper extends WallpaperService {
 
     private class SawtoothEngine extends WallpaperService.Engine {
 
-        private static final int FRAME_RATE = 25;
+        private static final int SECOND = 1000;
+        private static final int FRAME_RATE = 60;
 
         private final Runnable drawFrame = new Runnable() {
             public void run() {
@@ -36,6 +45,9 @@ public class SawtoothWallpaper extends WallpaperService {
         private BitmapDrawable background;
 
         private Paint waveformPaint;
+
+        private AnimationSet waveformAnim;
+        private Transformation transformation;
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
@@ -56,6 +68,39 @@ public class SawtoothWallpaper extends WallpaperService {
             waveform = new WaveformProcessor(SawtoothWallpaper.this).process(rawWaveform);
 
             waveformPaint.setAlpha(200);
+
+            buildWaveformAnimation(displayMetrics);
+        }
+
+        private void buildWaveformAnimation(DisplayMetrics displayMetrics) {
+            waveformAnim = new AnimationSet(true);
+
+            Animation scrollAnim = new TranslateAnimation(Animation.ABSOLUTE, 0,
+                    Animation.ABSOLUTE, displayMetrics.widthPixels - waveform.getWidth(),
+                    Animation.ABSOLUTE, 0, Animation.ABSOLUTE, 0);
+            scrollAnim.setInterpolator(new LinearInterpolator());
+            initializeAnimation(scrollAnim, 20 * SECOND);
+
+            Animation growAnim = new ScaleAnimation(1.0f, 1.0f, 0.0f, 1.0f, Animation.ABSOLUTE,
+                    displayMetrics.widthPixels / 2.0f, Animation.ABSOLUTE,
+                    waveform.getHeight() / 2.0f);
+            growAnim.setInterpolator(new BounceInterpolator());
+            initializeAnimation(growAnim, 10 * SECOND);
+
+            waveformAnim.addAnimation(scrollAnim);
+            waveformAnim.addAnimation(growAnim);
+            waveformAnim.setStartTime(Animation.START_ON_FIRST_FRAME);
+
+            transformation = new Transformation();
+        }
+
+        private void initializeAnimation(Animation animation, long duration) {
+            animation.setDuration(duration);
+            animation.setFillAfter(true);
+            animation.setRepeatMode(Animation.REVERSE);
+            animation.setRepeatCount(Animation.INFINITE);
+            animation.initialize(waveform.getWidth(), waveform.getHeight(), waveform.getWidth(),
+                    waveform.getHeight());
         }
 
         @Override
@@ -141,7 +186,9 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void drawWaveform(Canvas canvas) {
-            canvas.drawBitmap(waveform, 0, 0, waveformPaint);
+            waveformAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
+                    transformation);
+            canvas.drawBitmap(waveform, transformation.getMatrix(), waveformPaint);
         }
 
         private void scheduleFrame() {
