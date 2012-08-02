@@ -41,6 +41,8 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private Handler frameHandler;
 
+        private DisplayMetrics displayMetrics;
+
         private Bitmap waveform;
         private BitmapDrawable background;
 
@@ -54,7 +56,7 @@ public class SawtoothWallpaper extends WallpaperService {
             super.onCreate(surfaceHolder);
             System.out.println("ENGINE: onCreate");
 
-            DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+            displayMetrics = getResources().getDisplayMetrics();
 
             frameHandler = new Handler();
 
@@ -68,6 +70,7 @@ public class SawtoothWallpaper extends WallpaperService {
             waveform = new WaveformProcessor(SawtoothWallpaper.this).process(rawWaveform);
 
             waveformPaint.setAlpha(200);
+            transformation = new Transformation();
 
             buildWaveformAnimation(displayMetrics);
         }
@@ -90,8 +93,6 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformAnim.addAnimation(scrollAnim);
             waveformAnim.addAnimation(growAnim);
             waveformAnim.setStartTime(Animation.START_ON_FIRST_FRAME);
-
-            transformation = new Transformation();
         }
 
         private void initializeAnimation(Animation animation, long duration) {
@@ -188,6 +189,9 @@ public class SawtoothWallpaper extends WallpaperService {
         private void drawWaveform(Canvas canvas) {
             waveformAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
                     transformation);
+            transformation.getMatrix().postTranslate(0,
+                    displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
+
             canvas.drawBitmap(waveform, transformation.getMatrix(), waveformPaint);
         }
 
