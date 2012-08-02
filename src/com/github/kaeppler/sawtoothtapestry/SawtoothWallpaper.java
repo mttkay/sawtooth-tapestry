@@ -78,12 +78,14 @@ public class SawtoothWallpaper extends WallpaperService {
         private void buildWaveformAnimation(DisplayMetrics displayMetrics) {
             waveformAnim = new AnimationSet(true);
 
+            // moves the waveform back and forth horizontally across the screen
             Animation scrollAnim = new TranslateAnimation(Animation.ABSOLUTE, 0,
                     Animation.ABSOLUTE, displayMetrics.widthPixels - waveform.getWidth(),
                     Animation.ABSOLUTE, 0, Animation.ABSOLUTE, 0);
             scrollAnim.setInterpolator(new LinearInterpolator());
             initializeAnimation(scrollAnim, 20 * SECOND);
 
+            // grows and shrinks the waveform vertically using a bounce effect
             Animation growAnim = new ScaleAnimation(1.0f, 1.0f, 0.0f, 1.0f, Animation.ABSOLUTE,
                     displayMetrics.widthPixels / 2.0f, Animation.ABSOLUTE,
                     waveform.getHeight() / 2.0f);
@@ -187,8 +189,11 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void drawWaveform(Canvas canvas) {
+            // compute the animation progress for this frame
             waveformAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
                     transformation);
+
+            // move the bitmap to the vertical center of the screen
             transformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
