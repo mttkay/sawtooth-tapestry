@@ -55,7 +55,7 @@ public class WaveformProcessor {
     private void applyGradient(Bitmap targetWaveform, Canvas canvas) {
         Paint gradientPaint = new Paint();
         int startColor = resources.getColor(R.color.soundcloud_orange_light);
-        int centerColor = Color.parseColor("white");
+        int centerColor = Color.WHITE;
         int endColor = resources.getColor(R.color.soundcloud_orange_dark);
         LinearGradient gradient = new LinearGradient(0, 0, 0, targetWaveform.getHeight(),
                 new int[] { startColor, startColor, centerColor, endColor, endColor }, new float[] {

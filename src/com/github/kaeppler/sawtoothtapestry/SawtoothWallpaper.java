@@ -4,7 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
 import android.util.DisplayMetrics;
@@ -44,7 +44,7 @@ public class SawtoothWallpaper extends WallpaperService {
         private DisplayMetrics displayMetrics;
 
         private Bitmap waveform;
-        private BitmapDrawable background;
+        private Drawable background, centerPiece, separatorTop, separatorBottom, soundCloudLogo;
 
         private Paint waveformPaint;
 
@@ -62,17 +62,43 @@ public class SawtoothWallpaper extends WallpaperService {
 
             waveformPaint = new Paint();
 
-            background = (BitmapDrawable) getResources().getDrawable(R.drawable.background);
-            background.setBounds(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+            setupBackground();
 
             // TODO: load from API
             Bitmap rawWaveform = BitmapFactory.decodeResource(getResources(), R.drawable.waveform);
             waveform = new WaveformProcessor(SawtoothWallpaper.this).process(rawWaveform);
 
-            waveformPaint.setAlpha(200);
+            waveformPaint.setAlpha(100);
             transformation = new Transformation();
 
             buildWaveformAnimation(displayMetrics);
+        }
+
+        private void setupBackground() {
+            background = getResources().getDrawable(R.drawable.background);
+            background.setBounds(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+
+            centerPiece = getResources().getDrawable(R.drawable.center_piece);
+            int centerPieceHeight = (int) getResources().getDimension(R.dimen.center_piece_height);
+            int centerPieceY = displayMetrics.heightPixels / 2 - centerPieceHeight / 2;
+            centerPiece.setBounds(0, centerPieceY, displayMetrics.widthPixels, centerPieceY
+                    + centerPieceHeight);
+
+            separatorTop = getResources().getDrawable(R.drawable.separator_line);
+            int separatorHeight = (int) getResources().getDimension(R.dimen.separator_height);
+            separatorTop.setBounds(0, centerPieceY - separatorHeight, displayMetrics.widthPixels,
+                    centerPieceY);
+
+            separatorBottom = getResources().getDrawable(R.drawable.separator_line);
+            separatorBottom.setBounds(0, centerPieceY + centerPieceHeight,
+                    displayMetrics.widthPixels, centerPieceY + centerPieceHeight + separatorHeight);
+
+            soundCloudLogo = getResources().getDrawable(R.drawable.soundcloud_logo);
+            soundCloudLogo.setBounds(
+                    displayMetrics.widthPixels / 2 - soundCloudLogo.getIntrinsicWidth() / 2,
+                    displayMetrics.heightPixels / 2 - soundCloudLogo.getIntrinsicHeight() / 2,
+                    displayMetrics.widthPixels / 2 + soundCloudLogo.getIntrinsicWidth() / 2,
+                    displayMetrics.heightPixels / 2 + soundCloudLogo.getIntrinsicHeight() / 2);
         }
 
         private void buildWaveformAnimation(DisplayMetrics displayMetrics) {
@@ -186,6 +212,10 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void drawBackground(Canvas canvas) {
             background.draw(canvas);
+            centerPiece.draw(canvas);
+            separatorTop.draw(canvas);
+            separatorBottom.draw(canvas);
+            soundCloudLogo.draw(canvas);
         }
 
         private void drawWaveform(Canvas canvas) {

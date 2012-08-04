@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <color name="soundcloud_orange_light">#ff6600</color>
-  <color name="soundcloud_orange_dark">#ff1b00</color>
+  <color name="soundcloud_orange_light">#80ff6600</color>
+  <color name="soundcloud_orange_dark">#80ff1b00</color>
   
 </resources>

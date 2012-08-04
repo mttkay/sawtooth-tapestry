@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+  android:dither="true" >
+
+  <size android:height="@dimen/separator_height" />
+
+  <gradient
+    android:endColor="@color/soundcloud_orange_dark"
+    android:startColor="@color/soundcloud_orange_light"
+    android:type="linear" />
+
+</shape>
