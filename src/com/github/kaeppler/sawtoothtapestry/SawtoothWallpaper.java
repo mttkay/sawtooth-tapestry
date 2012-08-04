@@ -1,5 +1,6 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -81,28 +82,29 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void setupBackground() {
-            background = getResources().getDrawable(R.drawable.background);
+            Resources resources = getResources();
+
+            background = resources.getDrawable(R.drawable.background);
             background.setBounds(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
 
-            centerPiece = getResources().getDrawable(R.drawable.center_piece);
-            int centerPieceHeight = (int) getResources().getDimension(R.dimen.center_piece_height);
+            centerPiece = resources.getDrawable(R.drawable.center_piece);
+            int centerPieceHeight = (int) resources.getDimension(R.dimen.center_piece_height);
             int centerPieceY = displayMetrics.heightPixels / 2 - centerPieceHeight / 2;
             centerPiece.setBounds(0, centerPieceY, displayMetrics.widthPixels, centerPieceY
                     + centerPieceHeight);
 
-            separatorTop = getResources().getDrawable(R.drawable.separator_line);
-            int separatorHeight = (int) getResources().getDimension(R.dimen.separator_height);
+            separatorTop = resources.getDrawable(R.drawable.separator_line);
+            int separatorHeight = (int) resources.getDimension(R.dimen.separator_height);
             separatorTop.setBounds(0, centerPieceY - separatorHeight, displayMetrics.widthPixels,
                     centerPieceY);
 
-            separatorBottom = getResources().getDrawable(R.drawable.separator_line);
+            separatorBottom = resources.getDrawable(R.drawable.separator_line);
             separatorBottom.setBounds(0, centerPieceY + centerPieceHeight,
                     displayMetrics.widthPixels, centerPieceY + centerPieceHeight + separatorHeight);
 
             // set up the SC logo plus animation
-            logoFrontSide = BitmapFactory
-                    .decodeResource(getResources(), R.drawable.soundcloud_logo);
-            logoFlipSide = BitmapFactory.decodeResource(getResources(),
+            logoFrontSide = BitmapFactory.decodeResource(resources, R.drawable.soundcloud_logo);
+            logoFlipSide = BitmapFactory.decodeResource(resources,
                     R.drawable.soundcloud_logo_loading);
             logoCurrentSide = logoFrontSide;
             soundCloudLogoAnim = new Flip3dAnimation(this);
