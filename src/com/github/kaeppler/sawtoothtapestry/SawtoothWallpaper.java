@@ -18,6 +18,9 @@ import android.view.animation.ScaleAnimation;
 import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
 
+import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
+import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
+
 public class SawtoothWallpaper extends WallpaperService {
 
     @Override
@@ -26,7 +29,7 @@ public class SawtoothWallpaper extends WallpaperService {
         return new SawtoothEngine();
     }
 
-    private class SawtoothEngine extends WallpaperService.Engine {
+    private class SawtoothEngine extends WallpaperService.Engine implements Flip3dAnimationListener {
 
         private static final int SECOND = 1000;
         private static final int FRAME_RATE = 60;
@@ -43,13 +46,16 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private DisplayMetrics displayMetrics;
 
-        private Bitmap waveform;
-        private Drawable background, centerPiece, separatorTop, separatorBottom, soundCloudLogo;
+        private Bitmap waveform, logoFrontSide, logoFlipSide, logoCurrentSide;
+        private Drawable background, centerPiece, separatorTop, separatorBottom;
 
         private Paint waveformPaint;
 
         private AnimationSet waveformAnim;
-        private Transformation transformation;
+        private Transformation waveformTransformation, logoTransformation;
+
+        // for animating the 3D flip of the SC logo
+        private Animation soundCloudLogoAnim;
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
@@ -69,7 +75,7 @@ public class SawtoothWallpaper extends WallpaperService {
             waveform = new WaveformProcessor(SawtoothWallpaper.this).process(rawWaveform);
 
             waveformPaint.setAlpha(100);
-            transformation = new Transformation();
+            waveformTransformation = new Transformation();
 
             buildWaveformAnimation(displayMetrics);
         }
@@ -93,12 +99,19 @@ public class SawtoothWallpaper extends WallpaperService {
             separatorBottom.setBounds(0, centerPieceY + centerPieceHeight,
                     displayMetrics.widthPixels, centerPieceY + centerPieceHeight + separatorHeight);
 
-            soundCloudLogo = getResources().getDrawable(R.drawable.soundcloud_logo);
-            soundCloudLogo.setBounds(
-                    displayMetrics.widthPixels / 2 - soundCloudLogo.getIntrinsicWidth() / 2,
-                    displayMetrics.heightPixels / 2 - soundCloudLogo.getIntrinsicHeight() / 2,
-                    displayMetrics.widthPixels / 2 + soundCloudLogo.getIntrinsicWidth() / 2,
-                    displayMetrics.heightPixels / 2 + soundCloudLogo.getIntrinsicHeight() / 2);
+            // set up the SC logo plus animation
+            logoFrontSide = BitmapFactory
+                    .decodeResource(getResources(), R.drawable.soundcloud_logo);
+            logoFlipSide = BitmapFactory.decodeResource(getResources(),
+                    R.drawable.soundcloud_logo_loading);
+            logoCurrentSide = logoFrontSide;
+            soundCloudLogoAnim = new Flip3dAnimation(this);
+            soundCloudLogoAnim.setRepeatCount(Animation.INFINITE);
+            soundCloudLogoAnim.setRepeatMode(Animation.REVERSE);
+            soundCloudLogoAnim.setStartTime(Animation.START_ON_FIRST_FRAME);
+            soundCloudLogoAnim.initialize(logoCurrentSide.getWidth(), logoCurrentSide.getHeight(),
+                    logoCurrentSide.getWidth(), logoCurrentSide.getHeight());
+            logoTransformation = new Transformation();
         }
 
         private void buildWaveformAnimation(DisplayMetrics displayMetrics) {
@@ -215,19 +228,26 @@ public class SawtoothWallpaper extends WallpaperService {
             centerPiece.draw(canvas);
             separatorTop.draw(canvas);
             separatorBottom.draw(canvas);
-            soundCloudLogo.draw(canvas);
+
+            // animate the SoundCloud logo
+            soundCloudLogoAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
+                    logoTransformation);
+            logoTransformation.getMatrix().postTranslate(
+                    displayMetrics.widthPixels / 2 - logoCurrentSide.getWidth() / 2,
+                    displayMetrics.heightPixels / 2 - logoCurrentSide.getHeight() / 2);
+            canvas.drawBitmap(logoCurrentSide, logoTransformation.getMatrix(), null);
         }
 
         private void drawWaveform(Canvas canvas) {
             // compute the animation progress for this frame
             waveformAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
-                    transformation);
+                    waveformTransformation);
 
             // move the bitmap to the vertical center of the screen
-            transformation.getMatrix().postTranslate(0,
+            waveformTransformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
-            canvas.drawBitmap(waveform, transformation.getMatrix(), waveformPaint);
+            canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
         }
 
         private void scheduleFrame() {
@@ -236,6 +256,16 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void cancelScheduledFrame() {
             frameHandler.removeCallbacks(drawFrame);
+        }
+
+        @Override
+        public void onFrontSideVisible() {
+            this.logoCurrentSide = logoFrontSide;
+        }
+
+        @Override
+        public void onFlipSideVisible() {
+            this.logoCurrentSide = logoFlipSide;
         }
     }
 }
