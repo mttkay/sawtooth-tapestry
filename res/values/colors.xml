@@ -3,5 +3,9 @@
 
   <color name="soundcloud_orange_light">#80ff6600</color>
   <color name="soundcloud_orange_dark">#80ff1b00</color>
-  
+  <color name="toast_info_bg">#77aacc</color>
+  <color name="toast_info_stroke">#00aacc</color>
+  <color name="toast_error_bg">#80FF0000</color>
+  <color name="toast_error_stroke">#00FF0000</color>
+
 </resources>
