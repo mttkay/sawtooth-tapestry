@@ -78,29 +78,16 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformPaint.setAlpha(100);
             waveformTransformation = new Transformation();
 
-            buildWaveformAnimation(displayMetrics);
+            buildWaveformAnimation();
         }
 
         private void setupBackground() {
             Resources resources = getResources();
 
             background = resources.getDrawable(R.drawable.background);
-            background.setBounds(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
-
             centerPiece = resources.getDrawable(R.drawable.center_piece);
-            int centerPieceHeight = (int) resources.getDimension(R.dimen.center_piece_height);
-            int centerPieceY = displayMetrics.heightPixels / 2 - centerPieceHeight / 2;
-            centerPiece.setBounds(0, centerPieceY, displayMetrics.widthPixels, centerPieceY
-                    + centerPieceHeight);
-
             separatorTop = resources.getDrawable(R.drawable.separator_line);
-            int separatorHeight = (int) resources.getDimension(R.dimen.separator_height);
-            separatorTop.setBounds(0, centerPieceY - separatorHeight, displayMetrics.widthPixels,
-                    centerPieceY);
-
             separatorBottom = resources.getDrawable(R.drawable.separator_line);
-            separatorBottom.setBounds(0, centerPieceY + centerPieceHeight,
-                    displayMetrics.widthPixels, centerPieceY + centerPieceHeight + separatorHeight);
 
             // set up the SC logo plus animation
             logoFrontSide = BitmapFactory.decodeResource(resources, R.drawable.soundcloud_logo);
@@ -114,9 +101,32 @@ public class SawtoothWallpaper extends WallpaperService {
             soundCloudLogoAnim.initialize(logoCurrentSide.getWidth(), logoCurrentSide.getHeight(),
                     logoCurrentSide.getWidth(), logoCurrentSide.getHeight());
             logoTransformation = new Transformation();
+
+            // initialize all bitmaps bounds based on the current display configuration
+            updateBackground();
         }
 
-        private void buildWaveformAnimation(DisplayMetrics displayMetrics) {
+        private void updateBackground() {
+            Resources resources = getResources();
+
+            // update the background image bounds
+            background.setBounds(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+
+            // update the bounds of the box in the center of the screen
+            int centerPieceHeight = (int) resources.getDimension(R.dimen.center_piece_height);
+            int centerPieceY = displayMetrics.heightPixels / 2 - centerPieceHeight / 2;
+            centerPiece.setBounds(0, centerPieceY, displayMetrics.widthPixels, centerPieceY
+                    + centerPieceHeight);
+
+            // update the separators that enclose the box
+            int separatorHeight = (int) resources.getDimension(R.dimen.separator_height);
+            separatorTop.setBounds(0, centerPieceY - separatorHeight, displayMetrics.widthPixels,
+                    centerPieceY);
+            separatorBottom.setBounds(0, centerPieceY + centerPieceHeight,
+                    displayMetrics.widthPixels, centerPieceY + centerPieceHeight + separatorHeight);
+        }
+
+        private void buildWaveformAnimation() {
             waveformAnim = new AnimationSet(true);
 
             // moves the waveform back and forth horizontally across the screen
@@ -163,13 +173,16 @@ public class SawtoothWallpaper extends WallpaperService {
             System.out.println("ENGINE: onSurfaceCreated");
         }
 
+        // this is called e.g. when the screen orientation changes, since that will also change
+        // the dimensions of the surface we draw to
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            // TODO Auto-generated method stub
             super.onSurfaceChanged(holder, format, width, height);
-            System.out.println("ENGINE: onSurfaceChanged");
 
-            // TODO: adjust to changes
+            updateBackground();
+            // the waveform animation depends on the current screen width, so we need to rebuild
+            // it whenever the surface changes bounds
+            buildWaveformAnimation();
 
             drawFrame();
         }
