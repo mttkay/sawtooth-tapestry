@@ -1,4 +1,19 @@
 <resources>
-    <string name="app_name">SawtoothTapestry</string>
-    <string name="wallpaper_name">Sawtooth Tapestry</string>
+
+  <string name="app_name">SawtoothTapestry</string>
+  <string name="wallpaper_name">Sawtooth Tapestry</string>
+  <string name="settings_title">Wallpaper Settings</string>
+  <string name="settings_category_account">Account</string>
+  <string name="settings_connect_your_account">Log in to SoundCloud</string>
+  <string name="settings_connect_as">Log in as %s</string>
+  <string name="settings_disconnect_account">Log out %s</string>
+  <string name="error_login_failed">Log in failed</string>
+  <string name="login_dialog_title">Log in to SoundCloud</string>
+  <string name="login_dialog_username_hint">username</string>
+  <string name="login_dialog_password_hint">password</string>
+  <string name="login_dialog_button_ok">Login</string>
+  <string name="login_dialog_button_cancel">Cancel</string>
+  <string name="login_dialog_error_blank">Please enter a valid username and password</string>
+  <string name="login_success">Thanks, enjoy the flight!</string>
+
 </resources>

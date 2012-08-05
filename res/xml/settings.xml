@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+  android:key="sawtooth_tapestry_settings"
+  android:title="@string/settings_title" >
+
+  <PreferenceCategory android:title="@string/settings_category_account" >
+    <Preference
+      android:key="@string/settings_key_connect_account"
+      android:title="@string/settings_connect_your_account" />
+  </PreferenceCategory>
+
+</PreferenceScreen>
