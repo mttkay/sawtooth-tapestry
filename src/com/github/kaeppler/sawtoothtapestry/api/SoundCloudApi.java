@@ -57,4 +57,8 @@ public class SoundCloudApi {
     public GetTokenTask getToken(String username, String password) {
         return new GetTokenTask(api, username, password);
     }
+
+    public GetTracksTask getFavoriteTracks() {
+        return new GetTracksTask(api, "/me/favorites");
+    }
 }
