@@ -7,4 +7,6 @@ public interface SettingsKeys {
     final String SETTINGS_KEY_TOKEN_SCOPE = "token_scope";
     final String SETTINGS_KEY_USERNAME = "username";
 
+    final String SETTINGS_KEY_LAST_UPDATED = "last_updated";
+    final String SETTINGS_KEY_WAVEFORM_URLS = "waveform_urls";
 }

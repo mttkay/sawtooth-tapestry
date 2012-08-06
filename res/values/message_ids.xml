@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <item name="message_waveforms_available" type="id"/>
+  <item name="message_start_loading" type="id"/>
+  <item name="message_end_loading" type="id"/>
+
+</resources>
