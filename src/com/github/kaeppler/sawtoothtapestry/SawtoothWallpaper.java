@@ -50,10 +50,14 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
             SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
         }
 
-        getNextWaveform();
+        // only try to fetch more waveforms when not in preview mode
+        if (!engine.isPreview()) {
+            getNextWaveform();
+        }
     }
 
     private void getNextWaveform() {
+        waveformManager.refreshWaveformUrls();
         String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
         Log.d(TAG, "Up next: " + nextWaveformUrl);
         waveformDownloader.downloadWaveform(new Handler(this), nextWaveformUrl);
