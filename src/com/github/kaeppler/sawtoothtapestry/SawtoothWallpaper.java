@@ -63,6 +63,9 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
     public boolean handleMessage(Message msg) {
 
         switch (msg.what) {
+        case R.id.message_download_waveform:
+            getNextWaveform();
+            break;
         case R.id.message_waveforms_available:
             handleNewWaveformsAvailable();
             break;
@@ -90,9 +93,9 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
             }
         };
 
-        private boolean visible, renderWaveform, animateLogo;
+        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
 
-        private Handler frameHandler;
+        private Handler frameHandler, wallpaperHandler;
 
         private DisplayMetrics displayMetrics;
 
@@ -119,6 +122,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
             displayMetrics = getResources().getDisplayMetrics();
 
             frameHandler = new Handler();
+            wallpaperHandler = new Handler(SawtoothWallpaper.this);
 
             waveformPaint = new Paint();
             waveformPaint.setAlpha(100);
@@ -165,11 +169,14 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
                 @Override
                 public void onAnimationRepeat(Animation animation) {
+                    Log.d(TAG, "REPEAT logo anim (flipped: " + soundCloudLogoAnim.isFlipped() + ")");
                     animateLogo = false;
                     if (soundCloudLogoAnim.isFlipped()) {
                         // at this point, the LOADING side of the logo is visible; this is when
                         // we load the next waveform image
-                        getNextWaveform();
+                        suppressDrawing = true;
+                        cancelScheduledFrame();
+                        wallpaperHandler.sendEmptyMessage(R.id.message_download_waveform);
                     } else {
                         // otherwise, continue rendering the waveform image
                         renderWaveform = true;
@@ -243,6 +250,13 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
             // we're done loading the new image; flip the loading logo back to the front side
             animateLogo = true;
+
+            // reset the flags
+            bouncedLeft = bouncedRight = false;
+
+            suppressDrawing = false;
+
+            drawFrame();
         }
 
         @Override
@@ -265,6 +279,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         // the dimensions of the surface we draw to
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Log.d(TAG, "onSurfaceChanged");
             super.onSurfaceChanged(holder, format, width, height);
 
             updateBackground();
@@ -290,6 +305,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
         @Override
         public void onVisibilityChanged(boolean visible) {
+            Log.d(TAG, "onVisibilityChanged: " + true);
             this.visible = visible;
             if (visible) {
                 drawFrame();
@@ -307,7 +323,18 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         }
 
         private void drawFrame() {
+            if (suppressDrawing) {
+                Log.d(TAG, "<suppressed draw call>");
+                return;
+            }
+
             final SurfaceHolder holder = getSurfaceHolder();
+
+            Log.d(TAG,
+                    "visible: " + visible + " | wfs_available: "
+                            + waveformManager.areWaveformsAvailable() + " | waveform: "
+                            + (waveform == null ? "null" : "yes") + " | renderWaveform: "
+                            + renderWaveform + " | animateLogo: " + animateLogo);
 
             Canvas canvas = null;
             try {

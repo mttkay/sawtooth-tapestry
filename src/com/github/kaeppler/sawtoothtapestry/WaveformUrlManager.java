@@ -42,6 +42,10 @@ public class WaveformUrlManager implements IgnitedAsyncTaskHandler<Context, Void
         this.handler = handler;
 
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        refreshWaveformUrls();
+    }
+
+    public void refreshWaveformUrls() {
         String waveformUrlsCSV = preferences.getString(SettingsKeys.SETTINGS_KEY_WAVEFORM_URLS,
                 null);
         if (waveformUrlsCSV == null) {
