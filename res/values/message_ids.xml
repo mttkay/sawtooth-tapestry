@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+  <item name="message_download_waveform" type="id"/>
   <item name="message_waveforms_available" type="id"/>
   <item name="message_waveform_downloaded" type="id"/>
 
