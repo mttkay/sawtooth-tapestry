@@ -1,6 +1,5 @@
 package com.github.kaeppler.sawtoothtapestry;
 
-import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -26,7 +25,6 @@ import android.view.animation.TranslateAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
-import com.github.kaeppler.sawtoothtapestry.settings.WallpaperSettingsActivity;
 
 public class SawtoothWallpaper extends WallpaperService implements Handler.Callback {
 
@@ -48,18 +46,11 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         waveformManager = new WaveformUrlManager(this, api, new Handler(this));
         waveformDownloader = new WaveformDownloader();
 
-        if (api.isLoggedIn()) {
-            if (waveformManager.areWaveformsAvailable()) {
-                getNextWaveform();
-            } else {
-                waveformManager.fetchWaveformUrls();
-            }
-        } else {
-            SuperToast.info(this.getApplicationContext(), R.string.login_prompt);
-            Intent intent = new Intent(this, WallpaperSettingsActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+        if (!waveformManager.areWaveformsAvailable()) {
+            SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
         }
+
+        getNextWaveform();
     }
 
     private void getNextWaveform() {
@@ -84,7 +75,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
     }
 
     private void handleNewWaveformsAvailable() {
-        // TODO Auto-generated method stub
+        // TODO: this is currently unused, but could be useful at some point
         Log.d(TAG, "New waveforms available, smooth.");
     }
 

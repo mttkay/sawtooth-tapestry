@@ -7,6 +7,7 @@ import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
@@ -19,6 +20,7 @@ import android.widget.EditText;
 
 import com.github.kaeppler.sawtoothtapestry.R;
 import com.github.kaeppler.sawtoothtapestry.SuperToast;
+import com.github.kaeppler.sawtoothtapestry.WaveformUrlManager;
 import com.github.kaeppler.sawtoothtapestry.api.GetTokenTask;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.soundcloud.api.Token;
@@ -113,6 +115,12 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
         }
     }
 
+    private void logOut() {
+        Editor editor = preferences.edit();
+        editor.clear();
+        editor.commit();
+    }
+
     private void setupConnectAccountSetting() {
         if (api.isLoggedIn()) {
             setupForLoggedInUser();
@@ -128,12 +136,7 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
         connectAccountPref.setOnPreferenceClickListener(new OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                Editor editor = preferences.edit();
-                editor.remove(SettingsKeys.SETTINGS_KEY_TOKEN_ACCESS);
-                editor.remove(SettingsKeys.SETTINGS_KEY_TOKEN_REFRESH);
-                editor.remove(SettingsKeys.SETTINGS_KEY_TOKEN_SCOPE);
-                editor.remove(SettingsKeys.SETTINGS_KEY_USERNAME);
-                editor.commit();
+                logOut();
 
                 setupForLoggedOutUser();
 
@@ -193,6 +196,9 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
         editor.commit();
 
         setupForLoggedInUser();
+
+        // get the user's favorite tracks' waveforms
+        new WaveformUrlManager(this, api, new Handler()).fetchWaveformUrls();
 
         SuperToast.info(this, R.string.login_success);
     }
