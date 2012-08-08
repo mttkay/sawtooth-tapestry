@@ -25,7 +25,7 @@ import com.github.kaeppler.sawtoothtapestry.settings.SettingsKeys;
  */
 public class WaveformUrlManager implements IgnitedAsyncTaskHandler<Context, Void, List<Track>> {
 
-    public static final String DEFAULT_WAVEFORM_URL = "";
+    public static final String DEFAULT_WAVEFORM_URL = "https://w1.sndcdn.com/Wh3yMggQ8r3l_m.png";
 
     private static final String TAG = WaveformUrlManager.class.getSimpleName();
     private static final String URL_DELIMITER = ";";
@@ -42,9 +42,14 @@ public class WaveformUrlManager implements IgnitedAsyncTaskHandler<Context, Void
         this.handler = handler;
 
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
-        String waveformUrlsCSV = preferences.getString(SettingsKeys.SETTINGS_KEY_WAVEFORM_URLS, "");
-        String[] urlArray = waveformUrlsCSV.split(URL_DELIMITER);
-        waveformUrls = new ArrayList<String>(Arrays.asList(urlArray));
+        String waveformUrlsCSV = preferences.getString(SettingsKeys.SETTINGS_KEY_WAVEFORM_URLS,
+                null);
+        if (waveformUrlsCSV == null) {
+            waveformUrls = new ArrayList<String>();
+        } else {
+            String[] urlArray = waveformUrlsCSV.split(URL_DELIMITER);
+            waveformUrls = new ArrayList<String>(Arrays.asList(urlArray));
+        }
     }
 
     public boolean areWaveformsAvailable() {
@@ -77,8 +82,14 @@ public class WaveformUrlManager implements IgnitedAsyncTaskHandler<Context, Void
     }
 
     public String getRandomWaveformUrl() {
-        int index = new Random(System.currentTimeMillis()).nextInt(waveformUrls.size() - 1);
-        String url = waveformUrls.get(index);
+        int numWaveforms = waveformUrls.size();
+        String url = null;
+        if (numWaveforms == 1) {
+            url = waveformUrls.get(0);
+        } else if (numWaveforms > 1) {
+            int index = new Random(System.currentTimeMillis()).nextInt(numWaveforms - 1);
+            url = waveformUrls.get(index);
+        }
 
         if (url == null) {
             url = DEFAULT_WAVEFORM_URL;
