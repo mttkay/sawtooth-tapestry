@@ -33,23 +33,34 @@ public class WaveformProcessor {
         applyGradient(targetWaveform, canvas);
         canvas.drawBitmap(source, new Matrix(), null);
 
-        replaceColor(targetWaveform, 0xffefefef, Color.TRANSPARENT);
+        replaceColor(targetWaveform, Color.rgb(220, 220, 220), Color.rgb(240, 240, 240),
+                Color.TRANSPARENT);
 
         return targetWaveform;
     }
 
-    private void replaceColor(Bitmap targetWaveform, int sourceColor, int targetColor) {
+    private void replaceColor(Bitmap targetWaveform, int sourceColorLow, int sourceColorHigh,
+            int targetColor) {
         int length = targetWaveform.getWidth() * targetWaveform.getHeight();
         int[] pixels = new int[length];
         targetWaveform.getPixels(pixels, 0, targetWaveform.getWidth(), 0, 0,
                 targetWaveform.getWidth(), targetWaveform.getHeight());
         for (int i = 0; i < length; i++) {
-            if (pixels[i] == sourceColor) {
+            if (inColorRange(pixels[i], sourceColorLow, sourceColorHigh)) {
                 pixels[i] = targetColor;
             }
         }
         targetWaveform.setPixels(pixels, 0, targetWaveform.getWidth(), 0, 0,
                 targetWaveform.getWidth(), targetWaveform.getHeight());
+    }
+
+    private boolean inColorRange(int color, int colorLow, int colorHigh) {
+        int red = Color.red(color);
+        int green = Color.green(color);
+        int blue = Color.blue(color);
+        return red >= Color.red(colorLow) && red <= Color.red(colorHigh)
+                && green >= Color.green(colorLow) && green <= Color.green(colorHigh)
+                && blue >= Color.blue(colorLow) && blue <= Color.blue(colorHigh);
     }
 
     private void applyGradient(Bitmap targetWaveform, Canvas canvas) {
