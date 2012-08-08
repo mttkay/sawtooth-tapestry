@@ -15,5 +15,6 @@
   <string name="login_dialog_button_cancel">Cancel</string>
   <string name="login_dialog_error_blank">Please enter a valid username and password</string>
   <string name="login_success">Thanks, enjoy the flight!</string>
+  <string name="login_prompt">You must log in to SoundCloud first</string>
 
 </resources>

@@ -2,7 +2,6 @@
 <resources>
 
   <item name="message_waveforms_available" type="id"/>
-  <item name="message_start_loading" type="id"/>
-  <item name="message_end_loading" type="id"/>
+  <item name="message_waveform_downloaded" type="id"/>
 
 </resources>

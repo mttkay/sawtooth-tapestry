@@ -99,13 +99,11 @@ public class WaveformUrlManager implements IgnitedAsyncTaskHandler<Context, Void
 
     @Override
     public boolean onTaskStarted(Context context) {
-        handler.sendEmptyMessage(R.id.message_start_loading);
         return true;
     }
     
     @Override
     public boolean onTaskCompleted(Context context, List<Track> tracks) {
-        handler.sendEmptyMessage(R.id.message_end_loading);
         return true;
     }
 

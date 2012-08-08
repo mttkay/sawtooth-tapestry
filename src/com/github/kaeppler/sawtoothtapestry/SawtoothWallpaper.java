@@ -1,5 +1,6 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -7,10 +8,13 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
+import android.os.Message;
 import android.service.wallpaper.WallpaperService;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.animation.Animation;
+import android.view.animation.Animation.AnimationListener;
 import android.view.animation.AnimationSet;
 import android.view.animation.AnimationUtils;
 import android.view.animation.BounceInterpolator;
@@ -21,13 +25,67 @@ import android.view.animation.TranslateAnimation;
 
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
+import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
+import com.github.kaeppler.sawtoothtapestry.settings.WallpaperSettingsActivity;
 
-public class SawtoothWallpaper extends WallpaperService {
+public class SawtoothWallpaper extends WallpaperService implements Handler.Callback {
+
+    private static final String TAG = SawtoothWallpaper.class.getSimpleName();
+
+    private SawtoothEngine engine;
+    private WaveformUrlManager waveformManager;
+    private WaveformDownloader waveformDownloader;
 
     @Override
     public Engine onCreateEngine() {
         // android.os.Debug.waitForDebugger();
         return new SawtoothEngine();
+    }
+
+    private void onEngineAvailable(SawtoothEngine engine) {
+        this.engine = engine;
+        SoundCloudApi api = new SoundCloudApi(this);
+        waveformManager = new WaveformUrlManager(this, api, new Handler(this));
+        waveformDownloader = new WaveformDownloader();
+
+        if (api.isLoggedIn()) {
+            if (waveformManager.areWaveformsAvailable()) {
+                getNextWaveform();
+            } else {
+                waveformManager.fetchWaveformUrls();
+            }
+        } else {
+            SuperToast.info(this.getApplicationContext(), R.string.login_prompt);
+            Intent intent = new Intent(this, WallpaperSettingsActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
+    }
+
+    private void getNextWaveform() {
+        String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
+        Log.d(TAG, "Up next: " + nextWaveformUrl);
+        waveformDownloader.downloadWaveform(new Handler(this), nextWaveformUrl);
+    }
+
+    @Override
+    public boolean handleMessage(Message msg) {
+
+        switch (msg.what) {
+        case R.id.message_waveforms_available:
+            handleNewWaveformsAvailable();
+            break;
+        case R.id.message_waveform_downloaded:
+            engine.handleNewWaveformDownloaded((Bitmap) msg.obj);
+            break;
+        }
+
+        return true;
+    }
+
+    private void handleNewWaveformsAvailable() {
+        // TODO Auto-generated method stub
+        Log.d(TAG, "New waveforms available, smooth.");
     }
 
     private class SawtoothEngine extends WallpaperService.Engine implements Flip3dAnimationListener {
@@ -41,7 +99,7 @@ public class SawtoothWallpaper extends WallpaperService {
             }
         };
 
-        private boolean visible;
+        private boolean visible, renderWaveform, animateLogo;
 
         private Handler frameHandler;
 
@@ -56,29 +114,29 @@ public class SawtoothWallpaper extends WallpaperService {
         private Transformation waveformTransformation, logoTransformation;
 
         // for animating the 3D flip of the SC logo
-        private Animation soundCloudLogoAnim;
+        private Flip3dAnimation soundCloudLogoAnim;
+        private WaveformProcessor waveformProcessor;
+
+        // some state variables that we have to keep to coordinate the waveform anim
+        private boolean bouncedLeft, bouncedRight;
+        private float lastDeltaX = 0.0f;
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
             super.onCreate(surfaceHolder);
-            System.out.println("ENGINE: onCreate");
 
             displayMetrics = getResources().getDisplayMetrics();
 
             frameHandler = new Handler();
 
             waveformPaint = new Paint();
+            waveformPaint.setAlpha(100);
+            waveformProcessor = new WaveformProcessor(SawtoothWallpaper.this);
+            waveformTransformation = new Transformation();
 
             setupBackground();
 
-            // TODO: load from API
-            Bitmap rawWaveform = BitmapFactory.decodeResource(getResources(), R.drawable.waveform);
-            waveform = new WaveformProcessor(SawtoothWallpaper.this).process(rawWaveform);
-
-            waveformPaint.setAlpha(100);
-            waveformTransformation = new Transformation();
-
-            buildWaveformAnimation();
+            onEngineAvailable(this);
         }
 
         private void setupBackground() {
@@ -94,16 +152,44 @@ public class SawtoothWallpaper extends WallpaperService {
             logoFlipSide = BitmapFactory.decodeResource(resources,
                     R.drawable.soundcloud_logo_loading);
             logoCurrentSide = logoFrontSide;
+
+            buildLogoAnimation();
+
+            // initialize all bitmaps bounds based on the current display configuration
+            updateBackground();
+        }
+
+        private void buildLogoAnimation() {
             soundCloudLogoAnim = new Flip3dAnimation(this);
             soundCloudLogoAnim.setRepeatCount(Animation.INFINITE);
             soundCloudLogoAnim.setRepeatMode(Animation.REVERSE);
             soundCloudLogoAnim.setStartTime(Animation.START_ON_FIRST_FRAME);
             soundCloudLogoAnim.initialize(logoCurrentSide.getWidth(), logoCurrentSide.getHeight(),
                     logoCurrentSide.getWidth(), logoCurrentSide.getHeight());
-            logoTransformation = new Transformation();
+            soundCloudLogoAnim.setAnimationListener(new AnimationListener() {
 
-            // initialize all bitmaps bounds based on the current display configuration
-            updateBackground();
+                @Override
+                public void onAnimationStart(Animation animation) {
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                    animateLogo = false;
+                    if (soundCloudLogoAnim.isFlipped()) {
+                        // at this point, the LOADING side of the logo is visible; this is when
+                        // we load the next waveform image
+                        getNextWaveform();
+                    } else {
+                        // otherwise, continue rendering the waveform image
+                        renderWaveform = true;
+                    }
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                }
+            });
+            logoTransformation = new Transformation();
         }
 
         private void updateBackground() {
@@ -157,6 +243,17 @@ public class SawtoothWallpaper extends WallpaperService {
                     waveform.getHeight());
         }
 
+        private void handleNewWaveformDownloaded(Bitmap bitmap) {
+            Log.d(TAG, "got waveform: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+            waveform = waveformProcessor.process(bitmap);
+
+            buildWaveformAnimation();
+
+            // we're done loading the new image; flip the loading logo back to the front side
+            animateLogo = true;
+        }
+
         @Override
         public void onDestroy() {
             // TODO Auto-generated method stub
@@ -180,11 +277,14 @@ public class SawtoothWallpaper extends WallpaperService {
             super.onSurfaceChanged(holder, format, width, height);
 
             updateBackground();
-            // the waveform animation depends on the current screen width, so we need to rebuild
-            // it whenever the surface changes bounds
-            buildWaveformAnimation();
 
-            drawFrame();
+            if (waveform != null) {
+                // the waveform animation depends on the current screen width, so we need to rebuild
+                // it whenever the surface changes bounds
+                buildWaveformAnimation();
+
+                drawFrame();
+            }
         }
 
         @Override
@@ -199,7 +299,6 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onVisibilityChanged(boolean visible) {
-            System.out.println("ENGINE: onVisibilityChanged -> " + visible);
             this.visible = visible;
             if (visible) {
                 drawFrame();
@@ -224,7 +323,9 @@ public class SawtoothWallpaper extends WallpaperService {
                 canvas = holder.lockCanvas();
                 if (canvas != null) {
                     drawBackground(canvas);
-                    drawWaveform(canvas);
+                    if (waveform != null && renderWaveform) {
+                        drawWaveform(canvas);
+                    }
                 }
             } finally {
                 if (canvas != null) {
@@ -244,9 +345,13 @@ public class SawtoothWallpaper extends WallpaperService {
             separatorTop.draw(canvas);
             separatorBottom.draw(canvas);
 
-            // animate the SoundCloud logo
-            soundCloudLogoAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
-                    logoTransformation);
+            if (animateLogo) {
+                // animate the SoundCloud logo
+                soundCloudLogoAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
+                        logoTransformation);
+            } else {
+                logoTransformation.getMatrix().reset();
+            }
             logoTransformation.getMatrix().postTranslate(
                     displayMetrics.widthPixels / 2 - logoCurrentSide.getWidth() / 2,
                     displayMetrics.heightPixels / 2 - logoCurrentSide.getHeight() / 2);
@@ -262,7 +367,25 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformTransformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
+            float[] values = new float[9]; // 3x3 matrix
+            waveformTransformation.getMatrix().getValues(values);
+            float dx = values[2]; // contains the translation along the X axis
+
             canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
+
+            if (dx > lastDeltaX) {
+                bouncedLeft = true;
+            } else if (bouncedLeft && dx == 0) {
+                bouncedRight = true;
+            }
+
+            if (bouncedLeft && bouncedRight) {
+                bouncedLeft = bouncedRight = false;
+                animateLogo = true;
+                renderWaveform = false;
+            }
+
+            lastDeltaX = dx;
         }
 
         private void scheduleFrame() {

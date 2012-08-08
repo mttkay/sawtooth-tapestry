@@ -1,6 +1,7 @@
 package com.github.kaeppler.sawtoothtapestry;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
 import android.os.Message;
 
 import com.github.ignition.support.cache.ImageCache;
@@ -21,19 +22,16 @@ public class WaveformDownloader {
                 CACHE_CONCURRENT_THREADS);
     }
 
-    public void downloadWaveform(final WaveformDownloadCallback callback, String url) {
-        RemoteImageLoaderHandler handler = new RemoteImageLoaderHandler(null, url, null) {
+    public void downloadWaveform(final Handler handler, String url) {
+        RemoteImageLoaderHandler rilHandler = new RemoteImageLoaderHandler(null, url, null) {
             @Override
             protected boolean handleImageLoaded(Bitmap bitmap, Message msg) {
-                callback.onWaveformDownloaded(bitmap);
+                Message message = handler.obtainMessage(R.id.message_waveform_downloaded, bitmap);
+                handler.sendMessage(message);
                 return true;
             }
         };
-        new Thread(new RemoteImageLoaderJob(url, handler, imageCache, MAX_RETRIES,
+        new Thread(new RemoteImageLoaderJob(url, rilHandler, imageCache, MAX_RETRIES,
                 DEFAULT_BUFFER_SIZE)).start();
-    }
-
-    interface WaveformDownloadCallback {
-        void onWaveformDownloaded(Bitmap waveform);
     }
 }

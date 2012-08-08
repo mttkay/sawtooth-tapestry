@@ -53,14 +53,14 @@ public class Flip3dAnimation extends Animation {
             toDegrees += MAX_DEGREES;
             fromDegrees += MAX_DEGREES;
             // set the back side to be the new front side
-            listener.onFlipSideVisible();
             flipped = true;
+            listener.onFlipSideVisible();
         } else if (flipped && degrees <= toDegrees - MAX_DEGREES / 2) {
             // reverse the flip (see above)
             toDegrees -= MAX_DEGREES;
             fromDegrees -= MAX_DEGREES;
-            listener.onFrontSideVisible();
             flipped = false;
+            listener.onFrontSideVisible();
         }
     }
 
@@ -70,6 +70,10 @@ public class Flip3dAnimation extends Animation {
 
     public void setDirection(boolean counterClockwise) {
         this.counterClockwise = counterClockwise;
+    }
+
+    public boolean isFlipped() {
+        return flipped;
     }
 
     @Override
