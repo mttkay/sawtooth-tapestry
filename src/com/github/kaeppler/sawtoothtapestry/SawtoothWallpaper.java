@@ -1,11 +1,13 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
 import android.os.Handler;
 import android.os.Message;
 import android.service.wallpaper.WallpaperService;
@@ -25,6 +27,8 @@ import android.view.animation.TranslateAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
+import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
+import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
 
 public class SawtoothWallpaper extends WallpaperService {
 
@@ -49,7 +53,7 @@ public class SawtoothWallpaper extends WallpaperService {
     }
 
     private class SawtoothEngine extends WallpaperService.Engine implements
-            Flip3dAnimationListener, Handler.Callback {
+            Flip3dAnimationListener, Handler.Callback, NetworkListener {
 
         private static final int SECOND = 1000;
         private static final int FRAME_RATE = 60;
@@ -89,6 +93,9 @@ public class SawtoothWallpaper extends WallpaperService {
             super.onCreate(surfaceHolder);
 
             Log.d(TAG, "Engine: onCreate - preview = " + isPreview());
+
+            getApplicationContext().registerReceiver(new ConnectivityChangeBroadcastReceiver(this),
+                    new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
             handler = new Handler(this);
 
@@ -245,6 +252,11 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void handleNewWaveformDownloaded(Bitmap bitmap) {
+            if (bitmap == null) {
+                Log.e(TAG, "No bitmap received, is the network down?");
+                return;
+            }
+
             Log.d(TAG, "got waveform: " + bitmap.getWidth() + "x" + bitmap.getHeight());
 
             waveform = waveformProcessor.process(bitmap);
@@ -426,6 +438,19 @@ public class SawtoothWallpaper extends WallpaperService {
         @Override
         public void onFlipSideVisible() {
             this.logoCurrentSide = logoFlipSide;
+        }
+
+        @Override
+        public void onNetworkUp() {
+            Log.d(TAG, "Network is back u!");
+            if (waveform == null) {
+                getNextWaveform();
+            }
+        }
+
+        @Override
+        public void onNetworkDown() {
+            Log.e(TAG, "Network is down");
         }
     }
 }
