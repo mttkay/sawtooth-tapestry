@@ -26,59 +26,21 @@ import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 
-public class SawtoothWallpaper extends WallpaperService implements Handler.Callback {
+public class SawtoothWallpaper extends WallpaperService {
 
     private static final String TAG = SawtoothWallpaper.class.getSimpleName();
 
-    private SawtoothEngine engine;
-    private WaveformUrlManager waveformManager;
-    private WaveformDownloader waveformDownloader;
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d(TAG, "onCreate (service)");
+    }
 
     @Override
     public Engine onCreateEngine() {
         // android.os.Debug.waitForDebugger();
+        Log.d(TAG, "onCreateEngine");
         return new SawtoothEngine();
-    }
-
-    private void onEngineAvailable(SawtoothEngine engine) {
-        this.engine = engine;
-        SoundCloudApi api = new SoundCloudApi(this);
-        waveformManager = new WaveformUrlManager(this, api, new Handler(this));
-        waveformDownloader = new WaveformDownloader();
-
-        if (!waveformManager.areWaveformsAvailable()) {
-            SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
-        }
-
-        // only try to fetch more waveforms when not in preview mode
-        if (!engine.isPreview()) {
-            getNextWaveform();
-        }
-    }
-
-    private void getNextWaveform() {
-        waveformManager.refreshWaveformUrls();
-        String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
-        Log.d(TAG, "Up next: " + nextWaveformUrl);
-        waveformDownloader.downloadWaveform(new Handler(this), nextWaveformUrl);
-    }
-
-    @Override
-    public boolean handleMessage(Message msg) {
-
-        switch (msg.what) {
-        case R.id.message_download_waveform:
-            getNextWaveform();
-            break;
-        case R.id.message_waveforms_available:
-            handleNewWaveformsAvailable();
-            break;
-        case R.id.message_waveform_downloaded:
-            engine.handleNewWaveformDownloaded((Bitmap) msg.obj);
-            break;
-        }
-
-        return true;
     }
 
     private void handleNewWaveformsAvailable() {
@@ -86,7 +48,8 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         Log.d(TAG, "New waveforms available, smooth.");
     }
 
-    private class SawtoothEngine extends WallpaperService.Engine implements Flip3dAnimationListener {
+    private class SawtoothEngine extends WallpaperService.Engine implements
+            Flip3dAnimationListener, Handler.Callback {
 
         private static final int SECOND = 1000;
         private static final int FRAME_RATE = 60;
@@ -97,9 +60,11 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
             }
         };
 
-        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
+        private WaveformUrlManager waveformManager;
+        private WaveformDownloader waveformDownloader;
 
-        private Handler frameHandler, wallpaperHandler;
+        private Handler handler;
+        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
 
         private DisplayMetrics displayMetrics;
 
@@ -123,10 +88,11 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         public void onCreate(SurfaceHolder surfaceHolder) {
             super.onCreate(surfaceHolder);
 
-            displayMetrics = getResources().getDisplayMetrics();
+            Log.d(TAG, "Engine: onCreate - preview = " + isPreview());
 
-            frameHandler = new Handler();
-            wallpaperHandler = new Handler(SawtoothWallpaper.this);
+            handler = new Handler(this);
+
+            displayMetrics = getResources().getDisplayMetrics();
 
             waveformPaint = new Paint();
             waveformPaint.setAlpha(100);
@@ -135,7 +101,15 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
             setupBackground();
 
-            onEngineAvailable(this);
+            SoundCloudApi api = new SoundCloudApi(SawtoothWallpaper.this);
+            waveformManager = new WaveformUrlManager(SawtoothWallpaper.this, api, handler);
+            waveformDownloader = new WaveformDownloader(SawtoothWallpaper.this);
+
+            if (!waveformManager.areWaveformsAvailable()) {
+                SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
+            }
+
+            getNextWaveform();
         }
 
         private void setupBackground() {
@@ -180,7 +154,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
                         // we load the next waveform image
                         suppressDrawing = true;
                         cancelScheduledFrame();
-                        wallpaperHandler.sendEmptyMessage(R.id.message_download_waveform);
+                        handler.sendEmptyMessage(R.id.message_download_waveform);
                     } else {
                         // otherwise, continue rendering the waveform image
                         renderWaveform = true;
@@ -245,6 +219,31 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
                     waveform.getHeight());
         }
 
+        @Override
+        public boolean handleMessage(Message msg) {
+
+            switch (msg.what) {
+            case R.id.message_download_waveform:
+                getNextWaveform();
+                break;
+            case R.id.message_waveforms_available:
+                handleNewWaveformsAvailable();
+                break;
+            case R.id.message_waveform_downloaded:
+                handleNewWaveformDownloaded((Bitmap) msg.obj);
+                break;
+            }
+
+            return true;
+        }
+
+        private void getNextWaveform() {
+            waveformManager.refreshWaveformUrls();
+            String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
+            Log.d(TAG, "Up next: " + nextWaveformUrl);
+            waveformDownloader.downloadWaveform(handler, nextWaveformUrl);
+        }
+
         private void handleNewWaveformDownloaded(Bitmap bitmap) {
             Log.d(TAG, "got waveform: " + bitmap.getWidth() + "x" + bitmap.getHeight());
 
@@ -303,13 +302,14 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
             super.onSurfaceDestroyed(holder);
             System.out.println("ENGINE: onSurfaceDestroyed");
 
-            visible = false;
             cancelScheduledFrame();
         }
 
         @Override
         public void onVisibilityChanged(boolean visible) {
-            Log.d(TAG, "onVisibilityChanged: " + true);
+            super.onVisibilityChanged(visible);
+            Log.d(TAG, "onVisibilityChanged: " + visible);
+
             this.visible = visible;
             if (visible) {
                 drawFrame();
@@ -334,11 +334,10 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
             final SurfaceHolder holder = getSurfaceHolder();
 
-            Log.d(TAG,
-                    "visible: " + visible + " | wfs_available: "
-                            + waveformManager.areWaveformsAvailable() + " | waveform: "
-                            + (waveform == null ? "null" : "yes") + " | renderWaveform: "
-                            + renderWaveform + " | animateLogo: " + animateLogo);
+            Log.d(TAG, "preview: " + isPreview() + " | visible: " + visible + " | wfs_available: "
+                    + waveformManager.areWaveformsAvailable() + " | waveform: "
+                    + (waveform == null ? "null" : "yes") + " | renderWaveform: " + renderWaveform
+                    + " | animateLogo: " + animateLogo);
 
             Canvas canvas = null;
             try {
@@ -391,6 +390,7 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
 
             float[] values = new float[9]; // 3x3 matrix
             waveformTransformation.getMatrix().getValues(values);
+            // System.out.println(waveformTransformation.getMatrix().toShortString());
             float dx = values[2]; // contains the translation along the X axis
 
             canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
@@ -411,11 +411,11 @@ public class SawtoothWallpaper extends WallpaperService implements Handler.Callb
         }
 
         private void scheduleFrame() {
-            frameHandler.postDelayed(drawFrame, 1000 / FRAME_RATE);
+            handler.postDelayed(drawFrame, 1000 / FRAME_RATE);
         }
 
         private void cancelScheduledFrame() {
-            frameHandler.removeCallbacks(drawFrame);
+            handler.removeCallbacks(drawFrame);
         }
 
         @Override
