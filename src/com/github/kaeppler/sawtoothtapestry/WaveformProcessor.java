@@ -9,29 +9,25 @@ import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader.TileMode;
-import android.util.DisplayMetrics;
 
 public class WaveformProcessor {
 
     private Resources resources;
-    private int screenWidth;
 
     public WaveformProcessor(Context context) {
         this.resources = context.getResources();
-
-        DisplayMetrics dm = resources.getDisplayMetrics();
-        screenWidth = dm.widthPixels;
     }
 
     public Bitmap process(Bitmap source) {
-        Bitmap scaledSource = Bitmap.createScaledBitmap(source, source.getWidth(),
-                source.getHeight(), true);
-        Bitmap targetWaveform = Bitmap.createBitmap(scaledSource.getWidth(),
-                scaledSource.getHeight(), Bitmap.Config.ARGB_8888);
+        int scaledWidth = resources.getDimensionPixelSize(R.dimen.waveform_width);
+        int scaledHeight = resources.getDimensionPixelSize(R.dimen.waveform_height);
+        Bitmap scaledSource = Bitmap.createScaledBitmap(source, scaledWidth, scaledHeight, false);
+        Bitmap targetWaveform = Bitmap.createBitmap(scaledWidth, scaledHeight,
+                Bitmap.Config.ARGB_8888);
 
         Canvas canvas = new Canvas(targetWaveform);
         applyGradient(targetWaveform, canvas);
-        canvas.drawBitmap(source, new Matrix(), null);
+        canvas.drawBitmap(scaledSource, new Matrix(), null);
 
         replaceColor(targetWaveform, Color.rgb(220, 220, 220), Color.rgb(240, 240, 240),
                 Color.TRANSPARENT);

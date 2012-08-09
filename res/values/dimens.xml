@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+  <dimen name="waveform_width">1800dp</dimen>
+  <dimen name="waveform_height">180dp</dimen>
   <dimen name="center_piece_height">200dp</dimen>
   <dimen name="separator_height">5dp</dimen>
 
