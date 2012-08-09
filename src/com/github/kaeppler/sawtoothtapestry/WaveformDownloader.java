@@ -1,5 +1,6 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Message;
@@ -17,9 +18,10 @@ public class WaveformDownloader {
 
     private ImageCache imageCache;
 
-    public WaveformDownloader() {
+    public WaveformDownloader(Context context) {
         imageCache = new ImageCache(CACHE_INITIAL_CAPACITY, Integer.MAX_VALUE,
                 CACHE_CONCURRENT_THREADS);
+        imageCache.enableDiskCache(context.getApplicationContext(), ImageCache.DISK_CACHE_SDCARD);
     }
 
     public void downloadWaveform(final Handler handler, String url) {
