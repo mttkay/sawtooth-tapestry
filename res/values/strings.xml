@@ -2,6 +2,7 @@
 
   <string name="app_name">SawtoothTapestry</string>
   <string name="wallpaper_name">Sawtooth Tapestry</string>
+  <string name="wallpaper_desc">SoundCloud waveform party</string>
   <string name="settings_title">Wallpaper Settings</string>
   <string name="settings_category_account">Account</string>
   <string name="settings_connect_your_account">Log in to SoundCloud</string>

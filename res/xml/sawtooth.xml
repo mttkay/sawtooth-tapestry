@@ -1,3 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
-  android:settingsActivity="com.github.kaeppler.sawtoothtapestry.settings.WallpaperSettingsActivity" />
+  android:description="@string/wallpaper_desc"
+  android:settingsActivity="com.github.kaeppler.sawtoothtapestry.settings.WallpaperSettingsActivity"
+  android:thumbnail="@drawable/icon" />
