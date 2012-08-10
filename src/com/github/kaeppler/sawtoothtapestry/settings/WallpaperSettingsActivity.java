@@ -20,9 +20,9 @@ import android.widget.EditText;
 
 import com.github.kaeppler.sawtoothtapestry.R;
 import com.github.kaeppler.sawtoothtapestry.SuperToast;
-import com.github.kaeppler.sawtoothtapestry.WaveformUrlManager;
 import com.github.kaeppler.sawtoothtapestry.api.GetTokenTask;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
 import com.soundcloud.api.Token;
 
 //we can't use PreferenceFragment since we support API Level 7 so ignore

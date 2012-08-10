@@ -1,4 +1,8 @@
-package com.github.kaeppler.sawtoothtapestry;
+package com.github.kaeppler.sawtoothtapestry.waveform;
+
+import com.github.kaeppler.sawtoothtapestry.R;
+import com.github.kaeppler.sawtoothtapestry.R.color;
+import com.github.kaeppler.sawtoothtapestry.R.dimen;
 
 import android.content.Context;
 import android.content.res.Resources;

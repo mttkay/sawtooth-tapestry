@@ -1,4 +1,4 @@
-package com.github.kaeppler.sawtoothtapestry;
+package com.github.kaeppler.sawtoothtapestry.waveform;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +14,9 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.github.ignition.core.tasks.IgnitedAsyncTaskHandler;
+import com.github.kaeppler.sawtoothtapestry.R;
+import com.github.kaeppler.sawtoothtapestry.SuperToast;
+import com.github.kaeppler.sawtoothtapestry.R.id;
 import com.github.kaeppler.sawtoothtapestry.api.GetTracksTask;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.github.kaeppler.sawtoothtapestry.model.Track;

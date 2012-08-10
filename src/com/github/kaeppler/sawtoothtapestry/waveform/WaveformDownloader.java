@@ -1,4 +1,4 @@
-package com.github.kaeppler.sawtoothtapestry;
+package com.github.kaeppler.sawtoothtapestry.waveform;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -8,6 +8,8 @@ import android.os.Message;
 import com.github.ignition.support.cache.ImageCache;
 import com.github.ignition.support.images.remote.RemoteImageLoaderHandler;
 import com.github.ignition.support.images.remote.RemoteImageLoaderJob;
+import com.github.kaeppler.sawtoothtapestry.R;
+import com.github.kaeppler.sawtoothtapestry.R.id;
 
 public class WaveformDownloader {
 

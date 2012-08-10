@@ -29,6 +29,9 @@ import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
 import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformDownloader;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
 
 public class SawtoothWallpaper extends WallpaperService {
 
@@ -276,18 +279,8 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onDestroy() {
-            // TODO Auto-generated method stub
             super.onDestroy();
-            System.out.println("ENGINE: onDestroy");
-
             cancelScheduledFrame();
-        }
-
-        @Override
-        public void onSurfaceCreated(SurfaceHolder holder) {
-            // TODO Auto-generated method stub
-            super.onSurfaceCreated(holder);
-            System.out.println("ENGINE: onSurfaceCreated");
         }
 
         // this is called e.g. when the screen orientation changes, since that will also change
@@ -310,10 +303,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onSurfaceDestroyed(SurfaceHolder holder) {
-            // TODO Auto-generated method stub
             super.onSurfaceDestroyed(holder);
-            System.out.println("ENGINE: onSurfaceDestroyed");
-
             cancelScheduledFrame();
         }
 
@@ -330,14 +320,6 @@ public class SawtoothWallpaper extends WallpaperService {
             }
         }
 
-        @Override
-        public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep,
-                float yOffsetStep, int xPixelOffset, int yPixelOffset) {
-            super.onOffsetsChanged(xOffset, yOffset, xOffsetStep, yOffsetStep, xPixelOffset,
-                    yPixelOffset);
-            System.out.println("ENGINE: onOffsetsChanged");
-        }
-
         private void drawFrame() {
             if (suppressDrawing) {
                 Log.d(TAG, "<suppressed draw call>");
@@ -346,10 +328,11 @@ public class SawtoothWallpaper extends WallpaperService {
 
             final SurfaceHolder holder = getSurfaceHolder();
 
-            Log.d(TAG, "preview: " + isPreview() + " | visible: " + visible + " | wfs_available: "
-                    + waveformManager.areWaveformsAvailable() + " | waveform: "
-                    + (waveform == null ? "null" : "yes") + " | renderWaveform: " + renderWaveform
-                    + " | animateLogo: " + animateLogo);
+            // Log.d(TAG, "preview: " + isPreview() + " | visible: " + visible +
+            // " | wfs_available: "
+            // + waveformManager.areWaveformsAvailable() + " | waveform: "
+            // + (waveform == null ? "null" : "yes") + " | renderWaveform: " + renderWaveform
+            // + " | animateLogo: " + animateLogo);
 
             Canvas canvas = null;
             try {
