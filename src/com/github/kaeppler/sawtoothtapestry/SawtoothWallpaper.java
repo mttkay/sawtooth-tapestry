@@ -11,6 +11,9 @@ import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
 import com.integralblue.httpresponsecache.HttpResponseCache;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -36,6 +39,8 @@ import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
 
 public class SawtoothWallpaper extends WallpaperService {
+
+    public static final String ACTION_SETTINGS_CHANGED = "sc_wallpaper_settings_changed";
 
     private static final String TAG = SawtoothWallpaper.class.getSimpleName();
 
@@ -72,8 +77,9 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private WaveformUrlManager waveformManager;
 
+        private BroadcastReceiver receiver;
         private Handler handler;
-        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
+        private boolean visible, renderWaveform, animateLogo, suppressDrawing, scheduleColorChange;
 
         private DisplayMetrics displayMetrics;
 
@@ -126,6 +132,16 @@ public class SawtoothWallpaper extends WallpaperService {
                 e.printStackTrace();
                 Log.e(TAG, "Installing HTTP response cache failed");
             }
+
+            receiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    System.out.println("COLOR CHANGE");
+                    cancelScheduledFrame();
+                    getNextWaveform();
+                }
+            };
+            registerReceiver(receiver, new IntentFilter(ACTION_SETTINGS_CHANGED));
         }
 
         private void setupBackground() {
@@ -292,6 +308,10 @@ public class SawtoothWallpaper extends WallpaperService {
             HttpResponseCache responseCache = HttpResponseCache.getInstalled();
             if (responseCache != null) {
                 responseCache.flush();
+            }
+
+            if (receiver != null) {
+                unregisterReceiver(receiver);
             }
         }
 

@@ -34,8 +34,7 @@
 
     <activity
       android:name=".settings.WallpaperSettingsActivity"
-      android:exported="true"
-      android:theme="@android:style/Theme.Light.WallpaperSettings" >
+      android:exported="true">
     </activity>
   </application>
 

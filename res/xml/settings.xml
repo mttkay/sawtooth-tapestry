@@ -9,4 +9,11 @@
       android:title="@string/settings_connect_your_account" />
   </PreferenceCategory>
 
+  <PreferenceCategory android:title="Appearance">
+    <Preference
+      android:key="@string/settings_key_waveform_color"
+      android:title="@string/settings_waveform_color" />
+
+  </PreferenceCategory>
+
 </PreferenceScreen>

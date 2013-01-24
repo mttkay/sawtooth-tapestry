@@ -8,6 +8,7 @@
   <string name="settings_connect_your_account">Log in to SoundCloud</string>
   <string name="settings_connect_as">Log in as %s</string>
   <string name="settings_disconnect_account">Log out %s</string>
+  <string name="settings_waveform_color">Waveform color</string>
   <string name="error_login_failed">Log in failed</string>
   <string name="login_dialog_title">Log in to SoundCloud</string>
   <string name="login_dialog_username_hint">username</string>
@@ -17,5 +18,6 @@
   <string name="login_dialog_error_blank">Please enter a valid username and password</string>
   <string name="login_success">Thanks, enjoy the flight!</string>
   <string name="no_waveforms_available">This is a preview.\n\nLike tracks on SoundCloud and log in via the settings screen to see your favorite waveforms.</string>
+  <string name="waveformcolor_dialog_title">Pick Color</string>
 
 </resources>

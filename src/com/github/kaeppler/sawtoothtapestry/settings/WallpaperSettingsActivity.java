@@ -4,6 +4,8 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
@@ -19,10 +21,12 @@ import android.view.Window;
 import android.widget.EditText;
 
 import com.github.kaeppler.sawtoothtapestry.R;
+import com.github.kaeppler.sawtoothtapestry.SawtoothWallpaper;
 import com.github.kaeppler.sawtoothtapestry.SuperToast;
 import com.github.kaeppler.sawtoothtapestry.api.GetTokenTask;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
+import com.larswerkman.colorpicker.ColorPicker;
 import com.soundcloud.api.Token;
 
 //we can't use PreferenceFragment since we support API Level 7 so ignore
@@ -33,6 +37,7 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
     private static final String SOUNDCLOUD_ACCOUNT = "com.soundcloud.android.account";
 
     private static final int LOGIN_DIALOG = 0;
+    private static final int COLOR_DIALOG = 1;
 
     private SharedPreferences preferences;
     private Preference connectAccountPref;
@@ -55,15 +60,47 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
         this.api = new SoundCloudApi(this);
 
         setupConnectAccountSetting();
+        setupAppearanceSetting();
     }
 
     @Override
     protected Dialog onCreateDialog(int id) {
-        if (id == LOGIN_DIALOG) {
-            return createLoginDialog();
-        } else {
-            return super.onCreateDialog(id);
+        switch (id) {
+            case LOGIN_DIALOG:
+                return createLoginDialog();
+            case COLOR_DIALOG:
+                return createColorPickerDialog();
+            default:
+                return super.onCreateDialog(id);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        sendBroadcast(new Intent(SawtoothWallpaper.ACTION_SETTINGS_CHANGED));
+    }
+
+    private Dialog createColorPickerDialog() {
+        final ColorPicker colorPicker = new ColorPicker(this);
+
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setTitle(R.string.waveformcolor_dialog_title);
+        dialog.setView(colorPicker);
+        dialog.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                preferences.edit().putInt(getString(R.string.settings_key_waveform_color), colorPicker.getColor()).commit();
+                dismissDialog(COLOR_DIALOG);
+            }
+        });
+        dialog.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dismissDialog(COLOR_DIALOG);
+            }
+        });
+        return dialog.create();
     }
 
     private Dialog createLoginDialog() {
@@ -119,6 +156,17 @@ public class WallpaperSettingsActivity extends PreferenceActivity {
         Editor editor = preferences.edit();
         editor.clear();
         editor.commit();
+    }
+
+    private void setupAppearanceSetting() {
+        Preference preference = findPreference(getString(R.string.settings_key_waveform_color));
+        preference.setOnPreferenceClickListener(new OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                showDialog(COLOR_DIALOG);
+                return true;
+            }
+        });
     }
 
     private void setupConnectAccountSetting() {

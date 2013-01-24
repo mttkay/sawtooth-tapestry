@@ -1,5 +1,6 @@
 <resources>
 
   <string name="settings_key_connect_account">settings_key_connect_account</string>
+  <string name="settings_key_waveform_color">settings_key_waveform_color</string>
 
 </resources>

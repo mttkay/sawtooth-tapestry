@@ -5,6 +5,7 @@ import com.github.kaeppler.sawtoothtapestry.R.color;
 import com.github.kaeppler.sawtoothtapestry.R.dimen;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -15,14 +16,17 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Shader.TileMode;
+import android.preference.PreferenceManager;
 
 // Processes waveform metadata into a Bitmap that we can render and animate
 public class WaveformProcessor {
 
     private Resources resources;
+    private SharedPreferences preferences;
 
     public WaveformProcessor(Context context) {
         this.resources = context.getResources();
+        this.preferences = PreferenceManager.getDefaultSharedPreferences(context);
     }
 
     // turns waveform vector data into into a beautified bitmap
@@ -59,11 +63,17 @@ public class WaveformProcessor {
         return bitmap;
     }
 
-    private void applyGradient(Canvas canvas) {
+    public void applyGradient(Canvas canvas) {
         Paint gradientPaint = new Paint();
-        int startColor = resources.getColor(R.color.soundcloud_orange_light);
+        int startColor = preferences.getInt(resources.getString(R.string.settings_key_waveform_color),
+                resources.getColor(R.color.soundcloud_orange_light));
         int centerColor = Color.WHITE;
-        int endColor = resources.getColor(R.color.soundcloud_orange_dark);
+
+        float hsv[] = new float[3];
+        Color.colorToHSV(startColor, hsv);
+        hsv[0] -= 10;
+        int endColor = Color.HSVToColor(128, hsv);
+
         LinearGradient gradient = new LinearGradient(0, 0, 0, canvas.getHeight(),
                 new int[]{startColor, startColor, centerColor, endColor, endColor}, new float[]{
                 0, 0.4f, 0.5f, 0.6f, 1}, TileMode.REPEAT);
