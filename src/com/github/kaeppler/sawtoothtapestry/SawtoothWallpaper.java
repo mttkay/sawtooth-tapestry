@@ -29,6 +29,7 @@ import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
 import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformData;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformDownloader;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
@@ -113,7 +114,6 @@ public class SawtoothWallpaper extends WallpaperService {
 
             SoundCloudApi api = new SoundCloudApi(SawtoothWallpaper.this);
             waveformManager = new WaveformUrlManager(SawtoothWallpaper.this, api, handler);
-            waveformDownloader = new WaveformDownloader(SawtoothWallpaper.this);
 
             if (!waveformManager.areWaveformsAvailable()) {
                 SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
@@ -240,7 +240,7 @@ public class SawtoothWallpaper extends WallpaperService {
                 handleNewWaveformsAvailable();
                 break;
             case R.id.message_waveform_downloaded:
-                handleNewWaveformDownloaded((Bitmap) msg.obj);
+                handleNewWaveformDownloaded((WaveformData) msg.obj);
                 break;
             }
 
@@ -251,18 +251,18 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformManager.refreshWaveformUrls();
             String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
             Log.d(TAG, "Up next: " + nextWaveformUrl);
-            waveformDownloader.downloadWaveform(handler, nextWaveformUrl);
+            new WaveformDownloader(nextWaveformUrl, handler).start();
         }
 
-        private void handleNewWaveformDownloaded(Bitmap bitmap) {
-            if (bitmap == null) {
+        private void handleNewWaveformDownloaded(WaveformData waveformData) {
+            if (waveformData == null) {
                 Log.e(TAG, "No bitmap received, is the network down?");
                 return;
             }
 
-            Log.d(TAG, "got waveform: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+            Log.d(TAG, "got waveform: " + waveformData.width + "x" + waveformData.height);
 
-            waveform = waveformProcessor.process(bitmap);
+            waveform = waveformProcessor.process(waveformData);
 
             buildWaveformAnimation();
 
