@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 public class WaveformDownloader extends Thread {
 
     private static final String TAG = WaveformDownloader.class.getSimpleName();
-    private static final int MAX_RETRIES = 3;
     private static final int CONN_TIMEOUT = 20000;
 
     private String url;

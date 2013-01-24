@@ -248,6 +248,7 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void getNextWaveform() {
+            waveform = null;
             waveformManager.refreshWaveformUrls();
             String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
             Log.d(TAG, "Up next: " + nextWaveformUrl);
@@ -425,7 +426,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onNetworkUp() {
-            Log.d(TAG, "Network is back u!");
+            Log.d(TAG, "Network is back up!");
             if (waveform == null) {
                 getNextWaveform();
             }
