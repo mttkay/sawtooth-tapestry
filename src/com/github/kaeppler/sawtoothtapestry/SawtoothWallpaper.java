@@ -1,5 +1,16 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
+import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
+import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
+import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
+import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformData;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformDownloader;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
+import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
+import com.integralblue.httpresponsecache.HttpResponseCache;
+
 import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -23,16 +34,6 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.ScaleAnimation;
 import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
-
-import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
-import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
-import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
-import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
-import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformData;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformDownloader;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
 
 public class SawtoothWallpaper extends WallpaperService {
 
@@ -61,6 +62,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private static final int SECOND = 1000;
         private static final int FRAME_RATE = 60;
+        private static final int HTTP_CACHE_SIZE = 1024 * 1024; // 1MB
 
         private final Runnable drawFrame = new Runnable() {
             public void run() {
@@ -69,7 +71,6 @@ public class SawtoothWallpaper extends WallpaperService {
         };
 
         private WaveformUrlManager waveformManager;
-        private WaveformDownloader waveformDownloader;
 
         private Handler handler;
         private boolean visible, renderWaveform, animateLogo, suppressDrawing;
@@ -119,7 +120,12 @@ public class SawtoothWallpaper extends WallpaperService {
                 SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
             }
 
-            getNextWaveform();
+            try {
+                HttpResponseCache.install(getApplicationContext().getCacheDir(), HTTP_CACHE_SIZE);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e(TAG, "Installing HTTP response cache failed");
+            }
         }
 
         private void setupBackground() {
@@ -282,6 +288,11 @@ public class SawtoothWallpaper extends WallpaperService {
         public void onDestroy() {
             super.onDestroy();
             cancelScheduledFrame();
+
+            HttpResponseCache responseCache = HttpResponseCache.getInstalled();
+            if (responseCache != null) {
+                responseCache.flush();
+            }
         }
 
         // this is called e.g. when the screen orientation changes, since that will also change
