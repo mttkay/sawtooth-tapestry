@@ -11,6 +11,7 @@
 # generated files
 bin/
 gen/
+gen-external-apklibs
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -19,6 +20,10 @@ local.properties
 .settings
 .classpath
 .project
+
+# IDEA
+*.idea
+*.iml
 
 # Mac
 .DS_Store
