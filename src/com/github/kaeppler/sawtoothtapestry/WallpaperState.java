@@ -1,5 +1,6 @@
 package com.github.kaeppler.sawtoothtapestry;
 
+import android.graphics.Matrix;
 import android.view.animation.AnimationUtils;
 
 class WallpaperState {
@@ -28,4 +29,22 @@ class WallpaperState {
         return AnimationUtils.currentAnimationTimeMillis() - timePaused;
     }
 
+    void updateWaveformBounceState(Matrix matrix) {
+        float[] values = new float[9]; // 3x3 matrix
+        matrix.getValues(values);
+        float dx = values[2]; // contains the translation along the X axis
+
+        if (dx > lastDeltaX) {
+            bouncedLeft = true;
+        } else if (bouncedLeft && dx == 0) {
+            bouncedRight = true;
+        }
+
+        if (bouncedLeft && bouncedRight) {
+            bouncedLeft = bouncedRight = false;
+            animateLogo = true;
+        }
+
+        lastDeltaX = dx;
+    }
 }

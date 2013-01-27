@@ -370,25 +370,10 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformTransformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
-            float[] values = new float[9]; // 3x3 matrix
-            waveformTransformation.getMatrix().getValues(values);
             // System.out.println(waveformTransformation.getMatrix().toShortString());
-            float dx = values[2]; // contains the translation along the X axis
+            state.updateWaveformBounceState(waveformTransformation.getMatrix());
 
             canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
-
-            if (dx > state.lastDeltaX) {
-                state.bouncedLeft = true;
-            } else if (state.bouncedLeft && dx == 0) {
-                state.bouncedRight = true;
-            }
-
-            if (state.bouncedLeft && state.bouncedRight) {
-                state.bouncedLeft = state.bouncedRight = false;
-                state.animateLogo = true;
-            }
-
-            state.lastDeltaX = dx;
         }
 
         private final Runnable drawFrame = new Runnable() {
