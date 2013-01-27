@@ -69,12 +69,6 @@ public class SawtoothWallpaper extends WallpaperService {
         private static final int FRAME_RATE = 60;
         private static final int HTTP_CACHE_SIZE = 1024 * 1024; // 1MB
 
-        private final Runnable drawFrame = new Runnable() {
-            public void run() {
-                drawFrame();
-            }
-        };
-
         private WaveformUrlManager waveformManager;
 
         private BroadcastReceiver receiver;
@@ -93,15 +87,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private WaveformProcessor waveformProcessor;
 
-        // some state variables that we have to keep to coordinate the waveform anim
-        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
-        private boolean bouncedLeft, bouncedRight;
-        private float lastDeltaX = 0.0f;
-
-        // needed to keep track of the total duration of when the wallpaper was invisible,
-        // since this time must be subtracted from currenAnimTimeMillis, or else the anim
-        // will get jumpy when switching between visibility states
-        private long lastAnimTime, timePaused;
+        private WallpaperState state = new WallpaperState();
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
@@ -184,16 +170,15 @@ public class SawtoothWallpaper extends WallpaperService {
                 @Override
                 public void onAnimationRepeat(Animation animation) {
                     Log.d(TAG, "REPEAT logo anim (flipped: " + soundCloudLogoAnim.isFlipped() + ")");
-                    animateLogo = false;
+                    state.animateLogo = false;
                     if (soundCloudLogoAnim.isFlipped()) {
                         // at this point, the LOADING side of the logo is visible; this is when
                         // we load the next waveform image
-                        suppressDrawing = true;
                         cancelScheduledFrame();
                         handler.sendEmptyMessage(R.id.message_download_waveform);
                     } else {
                         // otherwise, continue rendering the waveform image
-                        renderWaveform = true;
+                        state.renderWaveform = true;
                     }
                 }
 
@@ -294,14 +279,12 @@ public class SawtoothWallpaper extends WallpaperService {
             buildWaveformAnimation();
 
             // we're done loading the new image; flip the loading logo back to the front side
-            animateLogo = true;
+            state.animateLogo = true;
 
             // reset the flags
-            bouncedLeft = bouncedRight = false;
+            state.bouncedLeft = state.bouncedRight = false;
 
-            suppressDrawing = false;
-
-            drawFrame();
+            scheduleFrame();
         }
 
         @Override
@@ -336,7 +319,7 @@ public class SawtoothWallpaper extends WallpaperService {
                 // it whenever the surface changes bounds
                 buildWaveformAnimation();
 
-                drawFrame();
+                scheduleFrame();
             }
         }
 
@@ -352,50 +335,15 @@ public class SawtoothWallpaper extends WallpaperService {
             super.onVisibilityChanged(visible);
             Log.d(TAG, "Engine: onVisibilityChanged: " + visible);
 
-            this.visible = visible;
+            state.visible = visible;
             if (visible) {
-                timePaused += (AnimationUtils.currentAnimationTimeMillis() - lastAnimTime);
-                Log.d(TAG, "anim pause: " + timePaused);
-                drawFrame();
+                state.updateTimePaused();
+                Log.d(TAG, "anim pause: " + state.timePaused);
+                scheduleFrame();
             } else {
                 cancelScheduledFrame();
-                lastAnimTime = AnimationUtils.currentAnimationTimeMillis();
-                Log.d(TAG, "last anim time: " + lastAnimTime);
-            }
-        }
-
-        private void drawFrame() {
-            if (suppressDrawing) {
-                Log.d(TAG, "<suppressed draw call>");
-                return;
-            }
-
-            final SurfaceHolder holder = getSurfaceHolder();
-
-            // Log.d(TAG, "preview: " + isPreview() + " | visible: " + visible +
-            // " | wfs_available: "
-            // + waveformManager.areWaveformsAvailable() + " | waveform: "
-            // + (waveform == null ? "null" : "yes") + " | renderWaveform: " + renderWaveform
-            // + " | animateLogo: " + animateLogo);
-
-            Canvas canvas = null;
-            try {
-                canvas = holder.lockCanvas();
-                if (canvas != null) {
-                    drawBackground(canvas);
-                    if (waveform != null && renderWaveform) {
-                        drawWaveform(canvas);
-                    }
-                }
-            } finally {
-                if (canvas != null) {
-                    holder.unlockCanvasAndPost(canvas);
-                }
-            }
-
-            cancelScheduledFrame();
-            if (visible) {
-                scheduleFrame();
+                state.updateLastAnimTime();
+                Log.d(TAG, "last anim time: " + state.lastAnimTime);
             }
         }
 
@@ -405,7 +353,7 @@ public class SawtoothWallpaper extends WallpaperService {
             separatorTop.draw(canvas);
             separatorBottom.draw(canvas);
 
-            if (animateLogo) {
+            if (state.animateLogo) {
                 // animate the SoundCloud logo
                 soundCloudLogoAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
                         logoTransformation);
@@ -420,7 +368,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void drawWaveform(Canvas canvas) {
             // compute the animation progress for this frame
-            waveformAnim.getTransformation(currentAnimTime(), waveformTransformation);
+            waveformAnim.getTransformation(state.currentAnimTime(), waveformTransformation);
 
             // move the bitmap to the vertical center of the screen
             waveformTransformation.getMatrix().postTranslate(0,
@@ -433,31 +381,66 @@ public class SawtoothWallpaper extends WallpaperService {
 
             canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
 
-            if (dx > lastDeltaX) {
-                bouncedLeft = true;
-            } else if (bouncedLeft && dx == 0) {
-                bouncedRight = true;
+            if (dx > state.lastDeltaX) {
+                state.bouncedLeft = true;
+            } else if (state.bouncedLeft && dx == 0) {
+                state.bouncedRight = true;
             }
 
-            if (bouncedLeft && bouncedRight) {
-                bouncedLeft = bouncedRight = false;
-                animateLogo = true;
-                renderWaveform = false;
+            if (state.bouncedLeft && state.bouncedRight) {
+                state.bouncedLeft = state.bouncedRight = false;
+                state.animateLogo = true;
+                state.renderWaveform = false;
             }
 
-            lastDeltaX = dx;
+            state.lastDeltaX = dx;
         }
 
+        private final Runnable drawFrame = new Runnable() {
+            public void run() {
+                if (state.skipPendingFrame) {
+                    Log.d(TAG, "<suppressed draw call>");
+                    return;
+                }
+
+                final SurfaceHolder holder = getSurfaceHolder();
+
+                // Log.d(TAG, "preview: " + isPreview() + " | visible: " + visible +
+                // " | wfs_available: "
+                // + waveformManager.areWaveformsAvailable() + " | waveform: "
+                // + (waveform == null ? "null" : "yes") + " | renderWaveform: " + renderWaveform
+                // + " | animateLogo: " + animateLogo);
+
+                Canvas canvas = null;
+                try {
+                    canvas = holder.lockCanvas();
+                    if (canvas != null) {
+                        drawBackground(canvas);
+                        if (waveform != null && state.renderWaveform) {
+                            drawWaveform(canvas);
+                        }
+                    }
+                } finally {
+                    if (canvas != null) {
+                        holder.unlockCanvasAndPost(canvas);
+                    }
+                }
+
+                cancelScheduledFrame();
+                if (state.visible) {
+                    scheduleFrame();
+                }
+            }
+        };
+
         private void scheduleFrame() {
+            state.skipPendingFrame = false;
             handler.postDelayed(drawFrame, 1000 / FRAME_RATE);
         }
 
         private void cancelScheduledFrame() {
+            state.skipPendingFrame = true;
             handler.removeCallbacks(drawFrame);
-        }
-
-        private long currentAnimTime() {
-            return AnimationUtils.currentAnimationTimeMillis() - timePaused;
         }
 
         @Override
