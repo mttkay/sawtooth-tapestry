@@ -335,7 +335,6 @@ public class SawtoothWallpaper extends WallpaperService {
             super.onVisibilityChanged(visible);
             Log.d(TAG, "Engine: onVisibilityChanged: " + visible);
 
-            state.visible = visible;
             if (visible) {
                 state.updateTimePaused();
                 Log.d(TAG, "anim pause: " + state.timePaused);
@@ -426,10 +425,7 @@ public class SawtoothWallpaper extends WallpaperService {
                     }
                 }
 
-                cancelScheduledFrame();
-                if (state.visible) {
-                    scheduleFrame();
-                }
+                scheduleFrame();
             }
         };
 

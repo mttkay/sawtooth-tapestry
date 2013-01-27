@@ -5,7 +5,7 @@ import android.view.animation.AnimationUtils;
 class WallpaperState {
 
     // some state variables that we have to keep to coordinate the waveform anim
-    boolean visible, renderWaveform, animateLogo, skipPendingFrame;
+    boolean renderWaveform, animateLogo, skipPendingFrame;
     boolean bouncedLeft, bouncedRight;
     float lastDeltaX = 0.0f;
 
