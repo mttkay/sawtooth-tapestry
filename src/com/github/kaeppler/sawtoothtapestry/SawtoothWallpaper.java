@@ -66,7 +66,7 @@ public class SawtoothWallpaper extends WallpaperService {
             Flip3dAnimationListener, Handler.Callback, NetworkListener {
 
         private static final int SECOND = 1000;
-        private static final int FRAME_RATE = 60;
+        private static final int FRAME_RATE = 45;
         private static final int HTTP_CACHE_SIZE = 1024 * 1024; // 1MB
 
         private WaveformUrlManager waveformManager;
@@ -321,8 +321,6 @@ public class SawtoothWallpaper extends WallpaperService {
                 // the waveform animation depends on the current screen width, so we need to rebuild
                 // it whenever the surface changes bounds
                 buildWaveformAnimation();
-
-                scheduleFrame();
             }
         }
 
