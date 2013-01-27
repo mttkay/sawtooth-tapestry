@@ -176,9 +176,6 @@ public class SawtoothWallpaper extends WallpaperService {
                         // we load the next waveform image
                         cancelScheduledFrame();
                         handler.sendEmptyMessage(R.id.message_download_waveform);
-                    } else {
-                        // otherwise, continue rendering the waveform image
-                        state.renderWaveform = true;
                     }
                 }
 
@@ -389,7 +386,6 @@ public class SawtoothWallpaper extends WallpaperService {
             if (state.bouncedLeft && state.bouncedRight) {
                 state.bouncedLeft = state.bouncedRight = false;
                 state.animateLogo = true;
-                state.renderWaveform = false;
             }
 
             state.lastDeltaX = dx;
@@ -415,7 +411,7 @@ public class SawtoothWallpaper extends WallpaperService {
                     canvas = holder.lockCanvas();
                     if (canvas != null) {
                         drawBackground(canvas);
-                        if (waveform != null && state.renderWaveform) {
+                        if (waveform != null && !state.animateLogo) {
                             drawWaveform(canvas);
                         }
                     }
