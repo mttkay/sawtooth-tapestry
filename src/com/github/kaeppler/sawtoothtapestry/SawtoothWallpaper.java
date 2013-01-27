@@ -256,6 +256,10 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void getNextWaveform() {
+            if (state.isLoading) {
+                Log.d(TAG, "ignoring getNextWaveform, already loading!");
+                return;
+            }
             waveform = null;
             waveformManager.refreshWaveformUrls();
             String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
@@ -264,6 +268,8 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void handleNewWaveformDownloaded(WaveformData waveformData) {
+            state.isLoading = false;
+
             if (waveformData == null) {
                 Log.e(TAG, "No bitmap received, is the network down?");
                 return;
@@ -411,13 +417,15 @@ public class SawtoothWallpaper extends WallpaperService {
         };
 
         private void scheduleFrame() {
-            state.skipPendingFrame = false;
-            handler.postDelayed(drawFrame, 1000 / FRAME_RATE);
+            if (!handler.hasMessages(0)) {
+                state.skipPendingFrame = false;
+                handler.postDelayed(drawFrame, 1000 / FRAME_RATE);
+            }
         }
 
         private void cancelScheduledFrame() {
             state.skipPendingFrame = true;
-            handler.removeCallbacks(drawFrame);
+            handler.removeCallbacksAndMessages(drawFrame);
         }
 
         @Override

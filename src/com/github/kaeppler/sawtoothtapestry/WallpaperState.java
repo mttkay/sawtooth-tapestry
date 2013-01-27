@@ -5,7 +5,7 @@ import android.view.animation.AnimationUtils;
 
 class WallpaperState {
 
-    boolean skipPendingFrame;
+    boolean skipPendingFrame, isLoading;
 
     // some state variables that we have to keep to coordinate the waveform anim
     boolean animateLogo, bouncedLeft, bouncedRight;
