@@ -79,7 +79,6 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private BroadcastReceiver receiver;
         private Handler handler;
-        private boolean visible, renderWaveform, animateLogo, suppressDrawing, scheduleColorChange;
 
         private DisplayMetrics displayMetrics;
 
@@ -89,15 +88,20 @@ public class SawtoothWallpaper extends WallpaperService {
         private Paint waveformPaint;
 
         private AnimationSet waveformAnim;
+        private Flip3dAnimation soundCloudLogoAnim;
         private Transformation waveformTransformation, logoTransformation;
 
-        // for animating the 3D flip of the SC logo
-        private Flip3dAnimation soundCloudLogoAnim;
         private WaveformProcessor waveformProcessor;
 
         // some state variables that we have to keep to coordinate the waveform anim
+        private boolean visible, renderWaveform, animateLogo, suppressDrawing;
         private boolean bouncedLeft, bouncedRight;
         private float lastDeltaX = 0.0f;
+
+        // needed to keep track of the total duration of when the wallpaper was invisible,
+        // since this time must be subtracted from currenAnimTimeMillis, or else the anim
+        // will get jumpy when switching between visibility states
+        private long lastAnimTime, timePaused;
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
@@ -303,6 +307,9 @@ public class SawtoothWallpaper extends WallpaperService {
         @Override
         public void onDestroy() {
             super.onDestroy();
+
+            Log.d(TAG, "Engine: onDestroy");
+
             cancelScheduledFrame();
 
             HttpResponseCache responseCache = HttpResponseCache.getInstalled();
@@ -319,7 +326,7 @@ public class SawtoothWallpaper extends WallpaperService {
         // the dimensions of the surface we draw to
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            Log.d(TAG, "onSurfaceChanged");
+            Log.d(TAG, "Engine: onSurfaceChanged");
             super.onSurfaceChanged(holder, format, width, height);
 
             updateBackground();
@@ -335,6 +342,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onSurfaceDestroyed(SurfaceHolder holder) {
+            Log.d(TAG, "Engine: onSurfaceDestroyed");
             super.onSurfaceDestroyed(holder);
             cancelScheduledFrame();
         }
@@ -342,13 +350,17 @@ public class SawtoothWallpaper extends WallpaperService {
         @Override
         public void onVisibilityChanged(boolean visible) {
             super.onVisibilityChanged(visible);
-            Log.d(TAG, "onVisibilityChanged: " + visible);
+            Log.d(TAG, "Engine: onVisibilityChanged: " + visible);
 
             this.visible = visible;
             if (visible) {
+                timePaused += (AnimationUtils.currentAnimationTimeMillis() - lastAnimTime);
+                Log.d(TAG, "anim pause: " + timePaused);
                 drawFrame();
             } else {
                 cancelScheduledFrame();
+                lastAnimTime = AnimationUtils.currentAnimationTimeMillis();
+                Log.d(TAG, "last anim time: " + lastAnimTime);
             }
         }
 
@@ -408,8 +420,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void drawWaveform(Canvas canvas) {
             // compute the animation progress for this frame
-            waveformAnim.getTransformation(AnimationUtils.currentAnimationTimeMillis(),
-                    waveformTransformation);
+            waveformAnim.getTransformation(currentAnimTime(), waveformTransformation);
 
             // move the bitmap to the vertical center of the screen
             waveformTransformation.getMatrix().postTranslate(0,
@@ -443,6 +454,10 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void cancelScheduledFrame() {
             handler.removeCallbacks(drawFrame);
+        }
+
+        private long currentAnimTime() {
+            return AnimationUtils.currentAnimationTimeMillis() - timePaused;
         }
 
         @Override
