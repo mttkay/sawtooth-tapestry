@@ -82,7 +82,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private DisplayMetrics displayMetrics;
 
-        private Bitmap waveform, logo, logoPlaying, logoCurrentSide;
+        private Bitmap waveform, logo, logoPlaying, logoCurrentSide, logoNextSide;
         private Drawable background, centerPiece, separatorTop, separatorBottom;
 
         private Paint waveformPaint;
@@ -288,7 +288,6 @@ public class SawtoothWallpaper extends WallpaperService {
         }
 
         private void updatePlayerState(WallpaperState.PlayerState newState, Bundle extras) {
-            state.playerState = newState;
             switch (newState) {
                 case PLAYING:
                     if (extras.containsKey(SC_EXTRA_WAVEFORM_SAMPLES)) {
@@ -297,14 +296,19 @@ public class SawtoothWallpaper extends WallpaperService {
                         WaveformData data = new WaveformData(samples.length, maxAmp, samples);
                         handleNewWaveformDownloaded(data);
                     }
+                    logoNextSide = logoPlaying;
                     break;
                 case PAUSED:
-                    break;
                 case IDLE:
+                    logoNextSide = logo;
                     break;
             }
 
-            state.animateLogo = true;
+            if (state.playerState != newState) {
+                state.animateLogo = true;
+            }
+
+            state.playerState = newState;
         }
 
         @Override
@@ -450,7 +454,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onFlipSideVisible() {
-            this.logoCurrentSide = logoPlaying;
+            this.logoCurrentSide = logoNextSide;
         }
 
         @Override
