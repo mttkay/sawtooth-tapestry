@@ -56,8 +56,8 @@ public class WaveformDownloader extends Thread {
             for (int i = 0; i < jsonArray.length(); i++) {
                 samples[i] = jsonArray.getInt(i);
             }
-            WaveformData waveformData = new WaveformData(data.getInt("width"), data.getInt("height"), samples);
-            Message message = handler.obtainMessage(R.id.message_waveform_downloaded, waveformData);
+            SampleData sampleData = new SampleData(data.getInt("width"), data.getInt("height"), samples);
+            Message message = handler.obtainMessage(R.id.message_waveform_downloaded, sampleData);
             handler.sendMessage(message);
 
 

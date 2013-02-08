@@ -1,12 +1,12 @@
 package com.github.kaeppler.sawtoothtapestry.waveform;
 
-public class WaveformData {
+public class SampleData {
 
     public int width;
     public int height;
     int[] samples;
 
-    public WaveformData(int width, int height, int[] samples) {
+    public SampleData(int width, int height, int[] samples) {
         this.width = width;
         this.height = height;
         this.samples = samples;
@@ -16,7 +16,7 @@ public class WaveformData {
      * @param requiredWidth the new width
      * @return the waveform data downsampled to the required width
      */
-    public WaveformData scale(int requiredWidth) {
+    public SampleData scale(int requiredWidth) {
         if (requiredWidth <= 0) throw new IllegalArgumentException("Invalid width: " + requiredWidth);
         if (requiredWidth == samples.length) {
             return this;
@@ -30,7 +30,7 @@ public class WaveformData {
                     newMax = newSamples[i];
                 }
             }
-            return new WaveformData(requiredWidth, newMax, newSamples);
+            return new SampleData(requiredWidth, newMax, newSamples);
         }
     }
 }

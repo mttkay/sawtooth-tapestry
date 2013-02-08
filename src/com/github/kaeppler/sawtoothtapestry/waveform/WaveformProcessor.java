@@ -1,8 +1,7 @@
 package com.github.kaeppler.sawtoothtapestry.waveform;
 
 import com.github.kaeppler.sawtoothtapestry.R;
-import com.github.kaeppler.sawtoothtapestry.R.color;
-import com.github.kaeppler.sawtoothtapestry.R.dimen;
+import com.github.kaeppler.sawtoothtapestry.model.Waveform;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -11,7 +10,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
@@ -30,11 +28,11 @@ public class WaveformProcessor {
     }
 
     // turns waveform vector data into into a beautified bitmap
-    public Bitmap process(WaveformData waveformData) {
+    public Waveform process(SampleData sampleData) {
         final int scaledWidth = resources.getDimensionPixelSize(R.dimen.waveform_width);
         final int scaledHeight = resources.getDimensionPixelSize(R.dimen.waveform_height);
 
-        WaveformData scaledData = waveformData.scale(scaledWidth);
+        SampleData scaledData = sampleData.scale(scaledWidth);
 
         Bitmap bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -60,7 +58,7 @@ public class WaveformProcessor {
                     , waveformPaint);
         }
 
-        return bitmap;
+        return new Waveform(sampleData, bitmap);
     }
 
     public void applyGradient(Canvas canvas) {

@@ -3,10 +3,10 @@ package com.github.kaeppler.sawtoothtapestry;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimation;
 import com.github.kaeppler.sawtoothtapestry.animation.Flip3dAnimationListener;
 import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
+import com.github.kaeppler.sawtoothtapestry.model.Waveform;
 import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
 import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformData;
-import com.github.kaeppler.sawtoothtapestry.waveform.WaveformDownloader;
+import com.github.kaeppler.sawtoothtapestry.waveform.SampleData;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
 import com.integralblue.httpresponsecache.HttpResponseCache;
@@ -63,11 +63,6 @@ public class SawtoothWallpaper extends WallpaperService {
         return new SawtoothEngine();
     }
 
-    private void handleNewWaveformsAvailable() {
-        // TODO: this is currently unused, but could be useful at some point
-        Log.d(TAG, "New waveforms available, smooth.");
-    }
-
     private class SawtoothEngine extends WallpaperService.Engine implements
             Flip3dAnimationListener, Handler.Callback, NetworkListener {
 
@@ -82,7 +77,7 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private DisplayMetrics displayMetrics;
 
-        private Bitmap waveform, logo, logoPlaying, logoCurrentSide, logoNextSide;
+        private Bitmap logo, logoPlaying, logoCurrentSide, logoNextSide;
         private Drawable background, centerPiece, separatorTop, separatorBottom;
 
         private Paint waveformPaint;
@@ -92,6 +87,7 @@ public class SawtoothWallpaper extends WallpaperService {
         private Transformation waveformTransformation, logoTransformation;
 
         private WaveformProcessor waveformProcessor;
+        private Waveform waveform;
 
         private WallpaperState state = new WallpaperState();
 
@@ -133,7 +129,10 @@ public class SawtoothWallpaper extends WallpaperService {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     System.out.println("COLOR CHANGE");
-                    cancelScheduledFrame();
+                    if (waveform != null) {
+                        cancelScheduledFrame();
+                        handleNewWaveformAvailable(waveform.getSampleData());
+                    }
                 }
             };
             registerReceiver(settingsChangeReceiver, new IntentFilter(ACTION_SETTINGS_CHANGED));
@@ -256,28 +255,25 @@ public class SawtoothWallpaper extends WallpaperService {
         public boolean handleMessage(Message msg) {
 
             switch (msg.what) {
-                case R.id.message_waveforms_available:
-                    handleNewWaveformsAvailable();
-                    break;
                 case R.id.message_waveform_downloaded:
-                    handleNewWaveformDownloaded((WaveformData) msg.obj);
+                    handleNewWaveformAvailable((SampleData) msg.obj);
                     break;
             }
 
             return true;
         }
 
-        private void handleNewWaveformDownloaded(WaveformData waveformData) {
+        private void handleNewWaveformAvailable(SampleData sampleData) {
             state.isLoading = false;
 
-            if (waveformData == null) {
+            if (sampleData == null) {
                 Log.e(TAG, "No bitmap received, is the network down?");
                 return;
             }
 
-            Log.d(TAG, "got waveform: " + waveformData.width + "x" + waveformData.height);
+            Log.d(TAG, "got waveform: " + sampleData.width + "x" + sampleData.height);
 
-            waveform = waveformProcessor.process(waveformData);
+            waveform = waveformProcessor.process(sampleData);
 
             buildWaveformAnimation();
 
@@ -293,8 +289,8 @@ public class SawtoothWallpaper extends WallpaperService {
                     if (extras.containsKey(SC_EXTRA_WAVEFORM_SAMPLES)) {
                         int maxAmp = extras.getInt(SC_EXTRA_WAVEFORM_AMP, 0);
                         int[] samples = extras.getIntArray(SC_EXTRA_WAVEFORM_SAMPLES);
-                        WaveformData data = new WaveformData(samples.length, maxAmp, samples);
-                        handleNewWaveformDownloaded(data);
+                        SampleData data = new SampleData(samples.length, maxAmp, samples);
+                        handleNewWaveformAvailable(data);
                     }
                     logoNextSide = logoPlaying;
                     break;
@@ -398,7 +394,7 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformTransformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
-            canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
+            canvas.drawBitmap(waveform.getBitmap(), waveformTransformation.getMatrix(), waveformPaint);
         }
 
         private final Runnable drawFrame = new Runnable() {
