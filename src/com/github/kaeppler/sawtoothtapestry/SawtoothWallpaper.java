@@ -22,6 +22,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.service.wallpaper.WallpaperService;
@@ -41,6 +42,11 @@ import android.view.animation.TranslateAnimation;
 public class SawtoothWallpaper extends WallpaperService {
 
     public static final String ACTION_SETTINGS_CHANGED = "sc_wallpaper_settings_changed";
+
+    private static final String ACTION_PLAYSTATE_CHANGED = "com.soundcloud.android.playstatechanged";
+    private static final String SC_EXTRA_PLAY_STATE = "playState";
+    private static final String SC_EXTRA_WAVEFORM_AMP = "waveformMaxAmp";
+    private static final String SC_EXTRA_WAVEFORM_SAMPLES = "waveformSamples";
 
     private static final String TAG = SawtoothWallpaper.class.getSimpleName();
 
@@ -71,12 +77,12 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private WaveformUrlManager waveformManager;
 
-        private BroadcastReceiver receiver;
+        private BroadcastReceiver settingsChangeReceiver, playStateReceiver;
         private Handler handler;
 
         private DisplayMetrics displayMetrics;
 
-        private Bitmap waveform, logoFrontSide, logoFlipSide, logoCurrentSide;
+        private Bitmap waveform, logo, logoPlaying, logoCurrentSide;
         private Drawable background, centerPiece, separatorTop, separatorBottom;
 
         private Paint waveformPaint;
@@ -123,15 +129,29 @@ public class SawtoothWallpaper extends WallpaperService {
                 Log.e(TAG, "Installing HTTP response cache failed");
             }
 
-            receiver = new BroadcastReceiver() {
+            settingsChangeReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     System.out.println("COLOR CHANGE");
                     cancelScheduledFrame();
-                    getNextWaveform();
                 }
             };
-            registerReceiver(receiver, new IntentFilter(ACTION_SETTINGS_CHANGED));
+            registerReceiver(settingsChangeReceiver, new IntentFilter(ACTION_SETTINGS_CHANGED));
+
+            playStateReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (!intent.hasExtra(SC_EXTRA_PLAY_STATE)) {
+                        throw new IllegalStateException("play state not found in broadcast intent");
+                    }
+
+                    String playState = intent.getStringExtra(SC_EXTRA_PLAY_STATE);
+                    updatePlayerState(WallpaperState.PlayerState.fromString(playState), intent.getExtras());
+                }
+            };
+            registerReceiver(playStateReceiver, new IntentFilter(ACTION_PLAYSTATE_CHANGED));
+
+            scheduleFrame();
         }
 
         private void setupBackground() {
@@ -143,10 +163,10 @@ public class SawtoothWallpaper extends WallpaperService {
             separatorBottom = resources.getDrawable(R.drawable.separator_line);
 
             // set up the SC logo plus animation
-            logoFrontSide = BitmapFactory.decodeResource(resources, R.drawable.soundcloud_logo);
-            logoFlipSide = BitmapFactory.decodeResource(resources,
-                    R.drawable.soundcloud_logo_loading);
-            logoCurrentSide = logoFrontSide;
+            logo = BitmapFactory.decodeResource(resources, R.drawable.soundcloud_logo);
+            logoPlaying = BitmapFactory.decodeResource(resources,
+                    R.drawable.soundcloud_logo_playing);
+            logoCurrentSide = logo;
 
             buildLogoAnimation();
 
@@ -171,12 +191,6 @@ public class SawtoothWallpaper extends WallpaperService {
                 public void onAnimationRepeat(Animation animation) {
                     Log.d(TAG, "REPEAT logo anim (flipped: " + soundCloudLogoAnim.isFlipped() + ")");
                     state.animateLogo = false;
-                    if (soundCloudLogoAnim.isFlipped()) {
-                        // at this point, the LOADING side of the logo is visible; this is when
-                        // we load the next waveform image
-                        cancelScheduledFrame();
-                        handler.sendEmptyMessage(R.id.message_download_waveform);
-                    }
                 }
 
                 @Override
@@ -214,6 +228,8 @@ public class SawtoothWallpaper extends WallpaperService {
                     Animation.ABSOLUTE, displayMetrics.widthPixels - waveform.getWidth(),
                     Animation.ABSOLUTE, 0, Animation.ABSOLUTE, 0);
             scrollAnim.setInterpolator(new LinearInterpolator());
+            scrollAnim.setRepeatMode(Animation.REVERSE);
+            scrollAnim.setRepeatCount(Animation.INFINITE);
             initializeAnimation(scrollAnim, 20 * SECOND);
 
             // grows and shrinks the waveform vertically using a bounce effect
@@ -221,7 +237,8 @@ public class SawtoothWallpaper extends WallpaperService {
                     displayMetrics.widthPixels / 2.0f, Animation.ABSOLUTE,
                     waveform.getHeight() / 2.0f);
             growAnim.setInterpolator(new BounceInterpolator());
-            initializeAnimation(growAnim, 10 * SECOND);
+            growAnim.setRepeatCount(0);
+            initializeAnimation(growAnim, 1 * SECOND);
 
             waveformAnim.addAnimation(scrollAnim);
             waveformAnim.addAnimation(growAnim);
@@ -231,8 +248,6 @@ public class SawtoothWallpaper extends WallpaperService {
         private void initializeAnimation(Animation animation, long duration) {
             animation.setDuration(duration);
             animation.setFillAfter(true);
-            animation.setRepeatMode(Animation.REVERSE);
-            animation.setRepeatCount(Animation.INFINITE);
             animation.initialize(waveform.getWidth(), waveform.getHeight(), waveform.getWidth(),
                     waveform.getHeight());
         }
@@ -241,30 +256,15 @@ public class SawtoothWallpaper extends WallpaperService {
         public boolean handleMessage(Message msg) {
 
             switch (msg.what) {
-            case R.id.message_download_waveform:
-                getNextWaveform();
-                break;
-            case R.id.message_waveforms_available:
-                handleNewWaveformsAvailable();
-                break;
-            case R.id.message_waveform_downloaded:
-                handleNewWaveformDownloaded((WaveformData) msg.obj);
-                break;
+                case R.id.message_waveforms_available:
+                    handleNewWaveformsAvailable();
+                    break;
+                case R.id.message_waveform_downloaded:
+                    handleNewWaveformDownloaded((WaveformData) msg.obj);
+                    break;
             }
 
             return true;
-        }
-
-        private void getNextWaveform() {
-            if (state.isLoading) {
-                Log.d(TAG, "ignoring getNextWaveform, already loading!");
-                return;
-            }
-            waveform = null;
-            waveformManager.refreshWaveformUrls();
-            String nextWaveformUrl = waveformManager.getRandomWaveformUrl();
-            Log.d(TAG, "Up next: " + nextWaveformUrl);
-            new WaveformDownloader(nextWaveformUrl, handler).start();
         }
 
         private void handleNewWaveformDownloaded(WaveformData waveformData) {
@@ -281,13 +281,30 @@ public class SawtoothWallpaper extends WallpaperService {
 
             buildWaveformAnimation();
 
-            // we're done loading the new image; flip the loading logo back to the front side
-            state.animateLogo = true;
-
             // reset the flags
             state.bouncedLeft = state.bouncedRight = false;
 
             scheduleFrame();
+        }
+
+        private void updatePlayerState(WallpaperState.PlayerState newState, Bundle extras) {
+            state.playerState = newState;
+            switch (newState) {
+                case PLAYING:
+                    if (extras.containsKey(SC_EXTRA_WAVEFORM_SAMPLES)) {
+                        int maxAmp = extras.getInt(SC_EXTRA_WAVEFORM_AMP, 0);
+                        int[] samples = extras.getIntArray(SC_EXTRA_WAVEFORM_SAMPLES);
+                        WaveformData data = new WaveformData(samples.length, maxAmp, samples);
+                        handleNewWaveformDownloaded(data);
+                    }
+                    break;
+                case PAUSED:
+                    break;
+                case IDLE:
+                    break;
+            }
+
+            state.animateLogo = true;
         }
 
         @Override
@@ -303,8 +320,11 @@ public class SawtoothWallpaper extends WallpaperService {
                 responseCache.flush();
             }
 
-            if (receiver != null) {
-                unregisterReceiver(receiver);
+            if (settingsChangeReceiver != null) {
+                unregisterReceiver(settingsChangeReceiver);
+            }
+            if (playStateReceiver != null) {
+                unregisterReceiver(playStateReceiver);
             }
         }
 
@@ -374,9 +394,6 @@ public class SawtoothWallpaper extends WallpaperService {
             waveformTransformation.getMatrix().postTranslate(0,
                     displayMetrics.heightPixels / 2 - waveform.getHeight() / 2);
 
-            // System.out.println(waveformTransformation.getMatrix().toShortString());
-            state.updateWaveformBounceState(waveformTransformation.getMatrix());
-
             canvas.drawBitmap(waveform, waveformTransformation.getMatrix(), waveformPaint);
         }
 
@@ -400,7 +417,7 @@ public class SawtoothWallpaper extends WallpaperService {
                     canvas = holder.lockCanvas();
                     if (canvas != null) {
                         drawBackground(canvas);
-                        if (waveform != null && !state.animateLogo) {
+                        if (waveform != null && state.playerState == WallpaperState.PlayerState.PLAYING) {
                             drawWaveform(canvas);
                         }
                     }
@@ -428,20 +445,17 @@ public class SawtoothWallpaper extends WallpaperService {
 
         @Override
         public void onFrontSideVisible() {
-            this.logoCurrentSide = logoFrontSide;
+            this.logoCurrentSide = logo;
         }
 
         @Override
         public void onFlipSideVisible() {
-            this.logoCurrentSide = logoFlipSide;
+            this.logoCurrentSide = logoPlaying;
         }
 
         @Override
         public void onNetworkUp() {
             Log.d(TAG, "Network is back up!");
-            if (waveform == null) {
-                getNextWaveform();
-            }
         }
 
         @Override
