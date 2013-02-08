@@ -19,7 +19,7 @@ class WallpaperState {
     }
     PlayerState playerState;
 
-    boolean skipPendingFrame, isLoading;
+    boolean isLoading;
 
     // some state variables that we have to keep to coordinate the waveform anim
     boolean animateLogo, bouncedLeft, bouncedRight;

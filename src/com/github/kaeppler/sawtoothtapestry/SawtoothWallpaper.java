@@ -6,6 +6,7 @@ import com.github.kaeppler.sawtoothtapestry.api.SoundCloudApi;
 import com.github.kaeppler.sawtoothtapestry.model.Waveform;
 import com.github.kaeppler.sawtoothtapestry.network.ConnectivityChangeBroadcastReceiver;
 import com.github.kaeppler.sawtoothtapestry.network.NetworkListener;
+import com.github.kaeppler.sawtoothtapestry.waveform.PreviewSampleData;
 import com.github.kaeppler.sawtoothtapestry.waveform.SampleData;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformProcessor;
 import com.github.kaeppler.sawtoothtapestry.waveform.WaveformUrlManager;
@@ -114,10 +115,6 @@ public class SawtoothWallpaper extends WallpaperService {
             SoundCloudApi api = new SoundCloudApi(SawtoothWallpaper.this);
             waveformManager = new WaveformUrlManager(SawtoothWallpaper.this, api, handler);
 
-            if (!waveformManager.areWaveformsAvailable()) {
-                SuperToast.info(getApplicationContext(), R.string.no_waveforms_available);
-            }
-
             try {
                 HttpResponseCache.install(getApplicationContext().getCacheDir(), HTTP_CACHE_SIZE);
             } catch (Exception e) {
@@ -128,7 +125,6 @@ public class SawtoothWallpaper extends WallpaperService {
             settingsChangeReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    System.out.println("COLOR CHANGE");
                     if (waveform != null) {
                         cancelScheduledFrame();
                         handleNewWaveformAvailable(waveform.getSampleData());
@@ -137,20 +133,24 @@ public class SawtoothWallpaper extends WallpaperService {
             };
             registerReceiver(settingsChangeReceiver, new IntentFilter(ACTION_SETTINGS_CHANGED));
 
-            playStateReceiver = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    if (!intent.hasExtra(SC_EXTRA_PLAY_STATE)) {
-                        throw new IllegalStateException("play state not found in broadcast intent");
+            if (isPreview()) {
+                handleNewWaveformAvailable(new PreviewSampleData());
+            } else {
+                playStateReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        if (!intent.hasExtra(SC_EXTRA_PLAY_STATE)) {
+                            throw new IllegalStateException("play state not found in broadcast intent");
+                        }
+
+                        String playState = intent.getStringExtra(SC_EXTRA_PLAY_STATE);
+                        updatePlayerState(WallpaperState.PlayerState.fromString(playState), intent.getExtras());
                     }
+                };
+                registerReceiver(playStateReceiver, new IntentFilter(ACTION_PLAYSTATE_CHANGED));
 
-                    String playState = intent.getStringExtra(SC_EXTRA_PLAY_STATE);
-                    updatePlayerState(WallpaperState.PlayerState.fromString(playState), intent.getExtras());
-                }
-            };
-            registerReceiver(playStateReceiver, new IntentFilter(ACTION_PLAYSTATE_CHANGED));
-
-            scheduleFrame();
+                scheduleFrame();
+            }
         }
 
         private void setupBackground() {
@@ -399,8 +399,8 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private final Runnable drawFrame = new Runnable() {
             public void run() {
-                if (state.skipPendingFrame) {
-                    Log.d(TAG, "<suppressed draw call>");
+                if (!isVisible()) {
+                    Log.d(TAG, "<suppressed draw call: not visible anymore>");
                     return;
                 }
 
@@ -417,7 +417,7 @@ public class SawtoothWallpaper extends WallpaperService {
                     canvas = holder.lockCanvas();
                     if (canvas != null) {
                         drawBackground(canvas);
-                        if (waveform != null && state.playerState == WallpaperState.PlayerState.PLAYING) {
+                        if (waveform != null && (isPreview() || state.playerState == WallpaperState.PlayerState.PLAYING)) {
                             drawWaveform(canvas);
                         }
                     }
@@ -433,13 +433,11 @@ public class SawtoothWallpaper extends WallpaperService {
 
         private void scheduleFrame() {
             if (!handler.hasMessages(0)) {
-                state.skipPendingFrame = false;
                 handler.postDelayed(drawFrame, 1000 / FRAME_RATE);
             }
         }
 
         private void cancelScheduledFrame() {
-            state.skipPendingFrame = true;
             handler.removeCallbacksAndMessages(drawFrame);
         }
 
